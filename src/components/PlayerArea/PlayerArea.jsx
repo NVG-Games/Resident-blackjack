@@ -1,0 +1,104 @@
+import { getHandTotal } from '../../engine/deck.js';
+import { getEffectiveTarget } from '../../engine/trumpEngine.js';
+import { ROUND_STATE } from '../../engine/gameState.js';
+import Card from '../Card/Card.jsx';
+
+export default function PlayerArea({ state }) {
+  const { playerHand, playerTableTrumps, botTableTrumps, playerHealth, playerStood, roundState } = state;
+  const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
+  const total = getHandTotal(playerHand);
+  const isBust = total > target;
+  const isClose = total >= target - 2 && !isBust;
+  const isRoundOver = roundState === ROUND_STATE.ROUND_OVER;
+
+  return (
+    <div className="flex flex-col items-center gap-3">
+      {/* Cards */}
+      <div className="flex items-end gap-2 min-h-[120px]">
+        {/* Face-down card — revealed at round end */}
+        {playerHand.length > 0 && (
+          <div className="relative">
+            <Card
+              card={playerHand[0]}
+              faceDown={!isRoundOver}
+              isNew={false}
+            />
+            <div className="absolute -bottom-5 left-0 right-0 text-center">
+              <span className="text-xs text-stone-500 font-fell italic">
+                {isRoundOver ? playerHand[0].value : 'hidden'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Face-up cards */}
+        {playerHand.slice(1).map((card, idx) => (
+          <Card
+            key={card.id}
+            card={card}
+            faceDown={false}
+            isNew={true}
+            highlight={isClose && idx === playerHand.length - 2}
+          />
+        ))}
+
+        {/* Score */}
+        {playerHand.length > 0 && (
+          <div className="ml-2 flex flex-col items-center justify-center">
+            <div className={`font-cinzel text-3xl font-bold transition-colors duration-300 ${
+              isBust ? 'text-red-600' : isClose ? 'text-amber-300' : 'text-stone-200'
+            }`}>
+              {total}
+            </div>
+            {isBust && (
+              <div className="text-red-500 text-sm font-fell italic animate-pulse">BUST</div>
+            )}
+            {!isBust && (
+              <div className="text-stone-500 text-xs font-fell">
+                of {target}
+              </div>
+            )}
+            {playerStood && !isBust && (
+              <div className="text-stone-400 text-xs font-fell italic mt-1">stood</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Player identity */}
+      <div className="flex items-center gap-3">
+        <HealthBar health={playerHealth} maxHealth={10} />
+        <div className="text-center">
+          <div className="font-cinzel text-sm font-bold text-amber-300 tracking-widest uppercase">
+            Clancy
+          </div>
+          <div className="text-xs text-stone-500 font-fell italic">You</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function HealthBar({ health, maxHealth }) {
+  const pips = Array.from({ length: maxHealth }, (_, i) => i < health);
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <div className="text-xs font-fell text-stone-400">
+        {health}/{maxHealth}
+      </div>
+      <div className="flex gap-0.5">
+        {pips.map((alive, i) => (
+          <div
+            key={i}
+            className={`w-2 h-3 rounded-sm transition-all duration-500 ${
+              alive
+                ? 'bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.5)]'
+                : 'bg-stone-800 border border-stone-700'
+            }`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
