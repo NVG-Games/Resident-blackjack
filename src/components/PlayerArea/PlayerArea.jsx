@@ -3,7 +3,7 @@ import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
-export default function PlayerArea({ state }) {
+export default function PlayerArea({ state, playerName = 'Clancy', hideCards = false }) {
   const { playerHand, playerTableTrumps, botTableTrumps, playerHealth, playerStood, roundState } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
   const total = getHandTotal(playerHand);
@@ -13,8 +13,8 @@ export default function PlayerArea({ state }) {
 
   return (
     <div className="flex flex-col items-center gap-3">
-      {/* Cards */}
-      <div className="flex items-end gap-2 min-h-[120px]">
+      {/* Cards — hidden when it's the other player's turn in hot-seat */}
+      <div className="flex items-end gap-2 min-h-[120px]" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
         {/* Face-down card — revealed at round end */}
         {playerHand.length > 0 && (
           <div className="relative">
@@ -70,7 +70,7 @@ export default function PlayerArea({ state }) {
         <HealthBar health={playerHealth} maxHealth={10} />
         <div className="text-center">
           <div className="font-cinzel text-sm font-bold text-amber-300 tracking-widest uppercase">
-            Clancy
+            {playerName}
           </div>
           <div className="text-xs text-stone-500 font-fell italic">You</div>
         </div>

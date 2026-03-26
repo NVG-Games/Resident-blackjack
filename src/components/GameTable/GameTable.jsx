@@ -13,11 +13,22 @@ import PhaseOverlay from '../PhaseOverlay/PhaseOverlay.jsx';
 import GameLog from '../GameLog/GameLog.jsx';
 import ActionButtons from './ActionButtons.jsx';
 import RoundResult from './RoundResult.jsx';
+import HandoffScreen from './HandoffScreen.jsx';
 
 const BOT_THINK_DELAY_MS = 800;
 const BOT_FAST_DELAY_MS = 350;
 
-export default function GameTable() {
+// playerRole: 'clancy' = you are Clancy (player), Hoffman is bot
+//             'hoffman' = you are Hoffman (bot slot), Clancy is opponent
+// In hot-seat both are human — role only changes labels.
+export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturnToMenu }) {
+  const isHotSeat = mode === 'hotseat';
+
+  // playerRole affects name labels. Engine is unchanged: "player" = top of reducer, "bot" = bottom.
+  // If you picked Hoffman: the "player" slot is labelled Hoffman, "bot" slot is labelled Clancy.
+  const player1Name = playerRole === 'clancy' ? 'Clancy' : 'Hoffman';
+  const player2Name = playerRole === 'clancy' ? 'Hoffman' : 'Clancy';
+
   const [state, dispatch] = useReducer(gameReducer, null, () => ({
     ...createInitialState(),
     overlay: {
@@ -29,12 +40,17 @@ export default function GameTable() {
   }));
 
   const [isThinking, setIsThinking] = useState(false);
+
+  // hot-seat: show handoff screen before BOT_TURN actions
+  const [showHandoff, setShowHandoff] = useState(false);
+  // hot-seat: player 2 has confirmed handoff and is now acting
+  const [hotSeatBotActive, setHotSeatBotActive] = useState(false);
+
   const botTimerRef = useRef(null);
   const tableRef = useRef(null);
   const botProcessingRef = useRef(false);
   const stateRef = useRef(state);
 
-  // Screen shake effect on loss
   const shakeTable = useCallback(() => {
     if (!tableRef.current) return;
     gsap.timeline()
@@ -69,8 +85,32 @@ export default function GameTable() {
     if (state.roundResult?.winner === 'bot') shakeTable();
   }, [state.roundResult, shakeTable]);
 
-  // BOT AI logic — runs exactly once per BOT_TURN entry
+  // Hot-seat: when BOT_TURN starts, show handoff screen (unless bot already stood)
   useEffect(() => {
+    if (!isHotSeat) return;
+    if (state.roundState === ROUND_STATE.BOT_TURN && !state.botStood && !hotSeatBotActive) {
+      setShowHandoff(true);
+    }
+    if (state.roundState !== ROUND_STATE.BOT_TURN) {
+      setShowHandoff(false);
+      setHotSeatBotActive(false);
+    }
+  }, [state.roundState, state.botStood, isHotSeat, hotSeatBotActive]);
+
+  // Hot-seat: if bot already stood when BOT_TURN is triggered, dispatch stand immediately
+  useEffect(() => {
+    if (!isHotSeat) return;
+    if (state.roundState === ROUND_STATE.BOT_TURN && state.botStood) {
+      const t = setTimeout(() => {
+        dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
+      }, 150);
+      return () => clearTimeout(t);
+    }
+  }, [state.roundState, state.botStood, isHotSeat]);
+
+  // AI Bot logic — only runs in AI mode
+  useEffect(() => {
+    if (isHotSeat) return;
     if (state.roundState !== ROUND_STATE.BOT_TURN) {
       botProcessingRef.current = false;
       return;
@@ -81,7 +121,6 @@ export default function GameTable() {
     botProcessingRef.current = true;
     clearTimeout(botTimerRef.current);
 
-    // If bot already stood, just flip the turn state back quickly
     if (state.botStood) {
       botTimerRef.current = setTimeout(() => {
         botProcessingRef.current = false;
@@ -100,18 +139,24 @@ export default function GameTable() {
       dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
     }, delay);
 
-    return () => {
-      clearTimeout(botTimerRef.current);
-    };
-  }, [state.roundState, state.botHand.length, state.botTrumpHand.length, state.gameOver]);
+    return () => clearTimeout(botTimerRef.current);
+  }, [state.roundState, state.botHand.length, state.botTrumpHand.length, state.gameOver, isHotSeat]);
 
-  // Keep stateRef current for bot decision
   stateRef.current = state;
 
+  // Player 1 actions (PLAYER_TURN)
   const handleHit = useCallback(() => dispatch({ type: ACTIONS.PLAYER_HIT }), []);
   const handleStand = useCallback(() => dispatch({ type: ACTIONS.PLAYER_STAND }), []);
   const handlePlayTrump = useCallback((trump) =>
     dispatch({ type: ACTIONS.PLAYER_USE_TRUMP, trump }), []);
+
+  // Player 2 (hot-seat bot slot) actions — dispatches as BOT_ACTION
+  const handleBotHit = useCallback(() =>
+    dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } }), []);
+  const handleBotStand = useCallback(() =>
+    dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } }), []);
+  const handleBotPlayTrump = useCallback((trump) =>
+    dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } }), []);
 
   const handleDismissOverlay = useCallback(() => {
     if (state.gameOver) {
@@ -124,15 +169,42 @@ export default function GameTable() {
   const handleNextRound = useCallback(() =>
     dispatch({ type: ACTIONS.NEXT_ROUND }), []);
 
+  const handleHandoffReady = useCallback(() => {
+    setShowHandoff(false);
+    setHotSeatBotActive(true);
+  }, []);
+
   const { roundState, overlay, roundResult, gameOver } = state;
   const showRoundResult = roundState === ROUND_STATE.ROUND_OVER && !overlay && !gameOver;
-  const isActionDisabled = isThinking || roundState !== ROUND_STATE.PLAYER_TURN;
+
+  // Determine whose turn it is and what actions to expose
+  const isBotTurn = roundState === ROUND_STATE.BOT_TURN;
+  const isPlayerTurn = roundState === ROUND_STATE.PLAYER_TURN;
+
+  // In hot-seat mode during BOT_TURN (after handoff) — show bot controls
+  const showBotControls = isHotSeat && isBotTurn && hotSeatBotActive && !showHandoff;
+
+  // In AI mode: disable when thinking or not player turn
+  // In hot-seat player turn: always active when it's PLAYER_TURN
+  const isActionDisabled = isHotSeat
+    ? !isPlayerTurn
+    : isThinking || !isPlayerTurn;
+
+  // Active player name for display
+  const activePlayerLabel = isHotSeat
+    ? (showBotControls ? player2Name : player1Name)
+    : player1Name;
+
+  // Trump hand to show: player 1's or player 2's (bot) based on who's acting
+  const activeTrumpHand = showBotControls ? state.botTrumpHand : state.playerTrumpHand;
+  const activeTrumpHandler = showBotControls ? handleBotPlayTrump : handlePlayTrump;
+  const activeTrumpDisabled = showBotControls ? false : isActionDisabled;
 
   return (
     <div ref={tableRef} className="relative w-full h-full flex flex-col overflow-hidden"
       style={{ fontFamily: 'IM Fell English, serif' }}>
 
-      {/* ── Background: dark green felt ── */}
+      {/* Background: dark green felt */}
       <div className="absolute inset-0"
         style={{
           background: 'radial-gradient(ellipse at 50% 50%, #0a1f0a 0%, #061206 50%, #030803 100%)',
@@ -161,23 +233,28 @@ export default function GameTable() {
         }}
       />
 
-      {/* Blood drips from top edges */}
+      {/* Blood drips */}
       <BloodDrips />
 
       {/* Main game layout */}
       <div className="relative z-20 flex flex-col h-full px-6 py-4 gap-2">
 
-        {/* ── TOP: Hoffman (Bot) ── */}
+        {/* TOP: Hoffman / player2 */}
         <section className="flex-none flex justify-center items-start pt-1">
-          <BotArea state={state} isThinking={isThinking} />
+          <BotArea
+            state={state}
+            isThinking={isThinking && !isHotSeat}
+            playerName={isHotSeat ? player2Name : 'Hoffman'}
+            hideCards={isHotSeat && !showBotControls && !showRoundResult}
+          />
         </section>
 
-        {/* ── MIDDLE: Bet panel ── */}
+        {/* MIDDLE: Bet panel */}
         <section className="flex-none flex justify-center">
           <BetPanel state={state} />
         </section>
 
-        {/* ── TABLE TRUMPS ── */}
+        {/* TABLE TRUMPS */}
         <section className="flex-none flex justify-center">
           <TableTrumps
             playerTableTrumps={state.playerTableTrumps}
@@ -185,17 +262,12 @@ export default function GameTable() {
           />
         </section>
 
-        {/* ── CENTER: Deck + Log ── */}
+        {/* CENTER: Deck + Log */}
         <section className="flex-1 flex gap-4 items-stretch min-h-0">
-          {/* Deck pile */}
           <div className="flex-1 flex items-center justify-center">
             <DeckPile count={state.deck.length} />
           </div>
-
-          {/* Divider */}
           <div className="w-px bg-stone-900" />
-
-          {/* Game log */}
           <div className="w-72 flex flex-col"
             style={{
               background: 'rgba(0,0,0,0.5)',
@@ -207,40 +279,56 @@ export default function GameTable() {
           </div>
         </section>
 
-        {/* ── ACTION BUTTONS ── */}
+        {/* ACTION BUTTONS */}
         <section className="flex-none flex justify-center py-1">
           <ActionButtons
             state={state}
-            onHit={handleHit}
-            onStand={handleStand}
-            disabled={isActionDisabled}
+            onHit={showBotControls ? handleBotHit : handleHit}
+            onStand={showBotControls ? handleBotStand : handleStand}
+            disabled={showBotControls ? false : isActionDisabled}
+            isHotSeat={isHotSeat}
+            showBotControls={showBotControls}
+            activePlayerName={activePlayerLabel}
+            isBotTurnActive={isBotTurn && !showHandoff}
           />
         </section>
 
-        {/* ── BOTTOM: Player (Clancy) ── */}
+        {/* BOTTOM: Clancy / player1 */}
         <section className="flex-none flex flex-col items-center gap-3 pb-1">
-          <PlayerArea state={state} />
+          <PlayerArea
+            state={state}
+            playerName={isHotSeat ? player1Name : 'Clancy'}
+            hideCards={isHotSeat && showBotControls && !showRoundResult}
+          />
 
-          {/* Trump hand */}
+          {/* Trump hand: switches between p1/p2 in hot-seat */}
           <div className="w-full max-w-lg">
             <TrumpHand
-              trumps={state.playerTrumpHand}
-              onPlay={handlePlayTrump}
-              disabled={isActionDisabled}
+              trumps={activeTrumpHand}
+              onPlay={activeTrumpHandler}
+              disabled={activeTrumpDisabled}
               roundState={roundState}
             />
           </div>
         </section>
       </div>
 
-      {/* ── ROUND RESULT ── */}
+      {/* ROUND RESULT */}
       {showRoundResult && (
         <RoundResult result={roundResult} onNext={handleNextRound} state={state} />
       )}
 
-      {/* ── PHASE / VICTORY / DEFEAT OVERLAY ── */}
+      {/* PHASE / VICTORY / DEFEAT OVERLAY */}
       {overlay && (
         <PhaseOverlay overlay={overlay} onDismiss={handleDismissOverlay} />
+      )}
+
+      {/* HOT-SEAT HANDOFF SCREEN */}
+      {isHotSeat && showHandoff && (
+        <HandoffScreen
+          toPlayerName={player2Name}
+          onReady={handleHandoffReady}
+        />
       )}
 
       {/* Vignette */}

@@ -3,14 +3,13 @@ import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
-export default function BotArea({ state, isThinking }) {
+export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false }) {
   const { botHand, playerTableTrumps, botTableTrumps, botHealth, botStood, roundState } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
   const isRoundOver = roundState === ROUND_STATE.ROUND_OVER;
   const faceUpCards = botHand.slice(1);
   const faceDownCard = botHand[0];
-  // Reveal face-down card when round is over
   const showFaceDown = isRoundOver && faceDownCard;
   const total = isRoundOver ? getHandTotal(botHand) : getHandTotal(faceUpCards);
   const faceUpTotal = getHandTotal(faceUpCards);
@@ -22,7 +21,7 @@ export default function BotArea({ state, isThinking }) {
       <div className="flex items-center gap-3">
         <div className="text-center">
           <div className="font-cinzel text-sm font-bold text-red-400 tracking-widest uppercase">
-            Hoffman
+            {playerName}
           </div>
           <div className="text-xs text-stone-500 font-fell italic">Your opponent</div>
         </div>
@@ -44,8 +43,8 @@ export default function BotArea({ state, isThinking }) {
         </div>
       )}
 
-      {/* Cards */}
-      <div className="flex items-end gap-2 min-h-[120px]">
+      {/* Cards — hidden when it's the other player's turn in hot-seat */}
+      <div className="flex items-end gap-2 min-h-[120px]" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
         {/* Face-down card — revealed at round end */}
         {faceDownCard && (
           <div className="relative">
