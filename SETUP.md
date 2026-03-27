@@ -14,7 +14,7 @@ Step-by-step instructions for running **21 — RE7 Card Game** locally, in Docke
 | [Docker](https://docs.docker.com/get-docker/) *(optional)* | 25+ | `docker -v` |
 | [Docker Compose](https://docs.docker.com/compose/) *(optional)* | v2 (built-in) | `docker compose version` |
 
-> The game has **no backend** and **no database**. P2P multiplayer uses WebRTC via the public [PeerJS cloud](https://peerjs.com/) — no account or API key needed.
+> The game is a **static SPA** — no backend is required for basic play. P2P multiplayer uses WebRTC via the public [PeerJS cloud](https://peerjs.com/). The **online lobby** (room list) optionally uses [Supabase](https://supabase.com/) — see [Option 5](#option-5--telegram-mini-app) for setup.
 
 ---
 
@@ -247,6 +247,94 @@ Variables prefixed with `VITE_` are embedded into the browser bundle at build ti
 - Both players must be on the same version of the game (same deploy)
 - The public PeerJS cloud may occasionally be slow — try refreshing and re-joining
 - If you're behind a strict corporate firewall, WebRTC may be blocked — use a self-hosted PeerJS server with a TURN relay instead
+
+### Game freezes after standing
+
+- This is a known engine invariant: `BOT_ACTION` hit/trump must preserve `BOT_TURN` state when the player has already stood. If you've modified `gameState.js`, verify this condition is intact.
+
+---
+
+## Option 5 — Telegram Mini App
+
+Run the game as a [Telegram Mini App](https://core.telegram.org/bots/webapps) so players can open it directly inside Telegram and invite friends from their contact list.
+
+### Step 1 — Create a Telegram Bot
+
+1. Open Telegram and search for **@BotFather**.
+2. Send `/newbot`, choose a name and a username (must end in `bot`, e.g. `re7_21_bot`).
+3. Save the **bot token** (you won't need it in the frontend, but you will if you ever add a bot backend).
+
+### Step 2 — Set the Mini App menu button
+
+In the chat with @BotFather:
+
+```
+/setmenubutton
+```
+
+Select your bot, then paste the URL of your deployed app (e.g. `https://your-github-user.github.io/Resident-blackjack/`).
+
+Users will now see a **"Play"** button at the bottom of your bot's chat that opens the game.
+
+### Step 3 — Create a Supabase project (for the lobby)
+
+The online multiplayer lobby uses Supabase Realtime to share open rooms across players. Without it, the room list will be empty (players can still connect manually by Peer ID).
+
+1. Go to [supabase.com](https://supabase.com/) → **New project** → choose a region close to your players.
+2. Once created, go to **Project Settings → API** and copy:
+   - **Project URL** → `VITE_SUPABASE_URL`
+   - **anon public** key → `VITE_SUPABASE_ANON_KEY`
+3. Go to **SQL Editor** and paste + run the contents of [`supabase/migrations/001_rooms.sql`](supabase/migrations/001_rooms.sql).
+
+### Step 4 — Configure environment variables
+
+#### Local development
+
+Copy `.env.example` to `.env` and fill in:
+
+```env
+VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+VITE_TG_BOT_USERNAME=re7_21_bot
+```
+
+#### GitHub Actions (GitHub Pages deploy)
+
+Add the three values as **Repository Secrets** in **Settings → Secrets and variables → Actions**:
+
+| Secret name | Value |
+|---|---|
+| `VITE_SUPABASE_URL` | your Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | your Supabase anon key |
+| `VITE_TG_BOT_USERNAME` | your bot username (no `@`) |
+
+The deploy workflow reads these automatically — see [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml).
+
+#### Docker Compose
+
+Pass the variables in your shell or a `.env` file:
+
+```bash
+VITE_SUPABASE_URL=https://xxxx.supabase.co \
+VITE_SUPABASE_ANON_KEY=eyJ... \
+VITE_TG_BOT_USERNAME=re7_21_bot \
+docker compose up --build
+```
+
+### Step 5 — Test inside Telegram
+
+1. Open your bot in Telegram.
+2. Press the **menu button** (bottom left of the chat) — the game opens as a Mini App.
+3. To test deep-link invites locally, use the Telegram test environment or share the link `https://t.me/<YOUR_BOT>?startapp=<ROOM-CODE>`.
+
+### How invite links work
+
+When a host is in the WaitingRoom:
+
+- **Inside Telegram**: tapping **Invite Friend via Telegram** opens a Telegram share dialog where they can pick a contact. The contact receives a link that opens the game and auto-joins the room.
+- **Outside Telegram**: tapping **Copy Invite Link** copies the deep-link URL to the clipboard. The guest opens it in Telegram (or pastes the room code manually).
+
+The link format is: `https://t.me/<BOT_USERNAME>?startapp=<ROOM-CODE>`
 
 ### Game freezes after standing
 

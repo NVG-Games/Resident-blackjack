@@ -6,9 +6,14 @@ import LobbyScreen from './components/GameTable/LobbyScreen.jsx';
 import WaitingRoom from './components/GameTable/WaitingRoom.jsx';
 import AssistantMode from './components/GameTable/AssistantMode.jsx';
 
+// Read Telegram deep-link start_param at boot time (static — won't change during session)
+// e.g. opened via t.me/BOT?startapp=WOLF-42
+const TG_START_PARAM = window.Telegram?.WebApp?.initDataUnsafe?.start_param ?? null;
+
 export default function App() {
   // screen: 'menu' | 'roleselect' | 'lobby' | 'waiting' | 'game' | 'assistant'
-  const [screen, setScreen] = useState('menu');
+  // If launched via deep-link invite, go straight to lobby with the room code
+  const [screen, setScreen] = useState(TG_START_PARAM ? 'lobby' : 'menu');
   const [gameConfig, setGameConfig] = useState({ mode: 'ai', playerRole: 'clancy' });
 
   // P2P online config passed through lobby → waiting → game
@@ -83,6 +88,7 @@ export default function App() {
           onBack={handleBackToMenu}
           onHostReady={handleHostReady}
           onJoinReady={handleJoinReady}
+          initialJoinCode={TG_START_PARAM}
         />
       )}
       {screen === 'waiting' && onlineState && (

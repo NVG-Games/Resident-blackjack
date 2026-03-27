@@ -26,6 +26,8 @@ A faithful web recreation of the card game "21" from **Resident Evil 7: Biohazar
 - AI opponent with card counting, bust probability, and strategic trump usage
 - **Hot-seat multiplayer** — two humans on one device
 - **P2P online multiplayer** — play over the internet via WebRTC (PeerJS)
+- **Telegram Mini App** — runs natively inside Telegram, invite friends from contacts
+- **Real Game Assistant** — card tracker + hit/stand advisor for physical card games
 - Authentic trump card PNGs from the Resident Evil Fandom Wiki
 - Gothic atmosphere: dark felt table, GSAP animations, 3D card flips, screen shake
 - Fully responsive — desktop and mobile
@@ -34,7 +36,7 @@ A faithful web recreation of the card game "21" from **Resident Evil 7: Biohazar
 
 ## Setup
 
-> **Full setup guide** (local dev, Docker, GitHub Pages, troubleshooting): **[SETUP.md](SETUP.md)**
+> **Full setup guide** (local dev, Docker, GitHub Pages, Telegram Mini App, troubleshooting): **[SETUP.md](SETUP.md)**
 
 ### TL;DR — Local Dev
 
@@ -45,7 +47,9 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173). No `.env`, no accounts, no config needed.
+Open [http://localhost:5173](http://localhost:5173). No `.env`, no accounts needed for AI / hot-seat modes.
+
+Online multiplayer lobby requires [Supabase](#supabase-lobby). Telegram features require [a bot](#telegram-mini-app-setup).
 
 ---
 
@@ -129,6 +133,98 @@ The workflow (`.github/workflows/deploy.yml`):
 
 ---
 
+## Supabase Lobby
+
+The online multiplayer room list is powered by **Supabase Realtime** (free tier is plenty).  
+Without it, the lobby list stays empty — players can still connect by pasting a Peer ID manually.
+
+### 1. Create a Supabase project
+
+1. Sign up at [supabase.com](https://supabase.com/) → **New project**
+2. Go to **Project Settings → API** and copy:
+   - **Project URL** → `VITE_SUPABASE_URL`
+   - **anon / public** key → `VITE_SUPABASE_ANON_KEY`
+3. Open **SQL Editor** and paste + run `supabase/migrations/001_rooms.sql`
+
+### 2. Add env vars
+
+```bash
+cp .env.example .env
+```
+
+Fill in `.env`:
+
+```env
+VITE_SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJ...
+```
+
+---
+
+## Telegram Mini App Setup
+
+Run the game inside Telegram so players can open it from the bot menu and invite friends directly from their contact list.
+
+### Step 1 — Create a bot via @BotFather
+
+1. Open Telegram → search **@BotFather** (blue verified checkmark)
+2. Send `/start`
+3. Send `/newbot`
+4. Enter a **display name** (e.g. `RE7 21 Card Game`)
+5. Enter a **username** — must end in `bot` (e.g. `re7_21_bot`)
+6. BotFather replies with your **bot token** — save it (not needed in the frontend, but useful later)
+
+### Step 2 — Set the Mini App button
+
+Still in @BotFather:
+
+```
+/setmenubutton
+```
+
+1. Select your bot
+2. Paste your **deployed app URL**, e.g.:
+   ```
+   https://your-username.github.io/Resident-blackjack/
+   ```
+3. Enter a button label, e.g. `Play`
+
+Users will now see a **Play** button at the bottom of the bot chat that opens the game as a Mini App.
+
+### Step 3 — Add bot username to env
+
+```env
+VITE_TG_BOT_USERNAME=re7_21_bot
+```
+
+This is used to generate invite deep-links:  
+`https://t.me/re7_21_bot?startapp=WOLF-42`
+
+When a friend opens this link in Telegram, the game launches and auto-joins room `WOLF-42`.
+
+### Step 4 — GitHub Actions secrets (for auto-deploy)
+
+Add these three secrets in **GitHub → Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `VITE_SUPABASE_URL` | your Supabase project URL |
+| `VITE_SUPABASE_ANON_KEY` | your Supabase anon key |
+| `VITE_TG_BOT_USERNAME` | bot username without `@` |
+
+Every push to `main` will rebuild and redeploy with these values baked in.
+
+### How invite links work
+
+When the host is in the waiting room:
+
+- **Inside Telegram** → **Invite Friend via Telegram** opens the native share sheet to pick a contact
+- **In a browser** → **Copy Invite Link** copies `https://t.me/<bot>?startapp=<ROOM-CODE>` to clipboard
+
+The guest opens the link in Telegram → game launches → auto-joins the room.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -138,6 +234,8 @@ The workflow (`.github/workflows/deploy.yml`):
 | Animations | GSAP 3.12 |
 | Styling | Tailwind CSS 3.4 |
 | P2P networking | PeerJS 1.5 (WebRTC) |
+| Lobby / Realtime | Supabase JS 2 |
+| Telegram integration | Telegram Web App SDK |
 | State management | `useReducer` (no external store) |
 | Language | JavaScript (ESM) |
 
@@ -162,19 +260,24 @@ src/
 ├── contexts/
 │   └── PeerContext.jsx              # Singleton PeerJS peer — survives screen transitions
 │
+├── lib/
+│   └── supabase.js                  # Supabase client (lobby realtime)
+│
 ├── hooks/
 │   ├── usePeer.js                   # Low-level PeerJS hook
-│   └── useLobby.js                  # Room discovery via broker peer pattern
+│   ├── useLobby.js                  # Room discovery via Supabase Realtime
+│   └── useTelegram.js               # Telegram Mini App SDK wrapper
 │
 ├── assets/
 │   └── trumps/                      # 33 PNG trump card images from RE Fandom Wiki
 │
 └── components/
     ├── GameTable/
-    │   ├── MainMenu.jsx             # Main menu (vs AI / Hot-seat / Online)
-    │   ├── RoleSelect.jsx           # Hot-seat role picker
-    │   ├── LobbyScreen.jsx          # Online lobby: host / join / room list
-    │   ├── WaitingRoom.jsx          # Pre-game waiting room (online)
+│   ├── MainMenu.jsx             # Main menu (vs AI / Hot-seat / Online / Assistant)
+│   ├── RoleSelect.jsx           # Hot-seat role picker
+│   ├── LobbyScreen.jsx          # Online lobby: host / join / room list (Supabase + TG)
+│   ├── WaitingRoom.jsx          # Pre-game waiting room (online + invite link)
+│   ├── AssistantMode.jsx        # Real-life card tracker / advisor
     │   ├── GameTable.jsx            # Game orchestrator (all modes)
     │   ├── ActionButtons.jsx        # HIT / STAND
     │   ├── HandoffScreen.jsx        # Hot-seat device handoff overlay
@@ -203,14 +306,17 @@ Play against Hoffman, controlled by an AI that tracks bust probability and choos
 Two human players share one device. A full-screen handoff overlay appears between turns.
 
 ### Online Multiplayer (P2P)
-Play over the internet — no server required (WebRTC via PeerJS).
+Play over the internet — no server required (WebRTC via PeerJS). Room discovery uses Supabase Realtime.
 
 1. One player clicks **Multiplayer (P2P)** → **Host a Game**
-2. Share the 4-character room code (e.g. `WOLF-42`) with your opponent
-3. The opponent joins from the room list or by entering the code
+2. Share the room code (e.g. `WOLF-42`) — or in Telegram tap **Invite Friend**
+3. The opponent joins from the room list, via deep-link, or by entering the code
 4. Host clicks **Begin the Ordeal**
 
-The game state is synchronised via action mirroring: every action is dispatched locally and sent to the remote peer, who replays it in their deterministic reducer. Deck shuffles use a shared seed so both clients produce identical decks.
+Game state is synchronised via action mirroring. Deck shuffles use a shared seed so both clients produce identical decks.
+
+### Real Game Assistant
+Physical card game tracker — no AI opponent, no virtual cards. Enter the cards you draw in real life and the assistant shows the score, bust probability, and a hit/stand recommendation for each player. Trump card effects on the target score are also tracked.
 
 ---
 

@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
+import { useTelegram } from '../../hooks/useTelegram.js';
 
 const panelStyle = {
   background: 'linear-gradient(160deg, #0d0603 0%, #1a0c07 60%, #0a0402 100%)',
@@ -14,15 +15,17 @@ const panelStyle = {
  * Guest sees this waiting for the host to start.
  *
  * Props:
- *   isHost   — boolean
- *   code     — room code string
- *   onStart  — called by host to initiate game start
- *   onBack   — cancel / leave waiting room
+ *   isHost            — boolean
+ *   code              — room code string
+ *   onStart           — called by host to initiate game start
+ *   onBack            — cancel / leave waiting room
  *   opponentConnected — boolean, guest connected
  */
 export default function WaitingRoom({ isHost, code, onStart, onBack, opponentConnected }) {
   const containerRef = useRef(null);
   const dotRef = useRef(null);
+  const { isTelegram, openInviteLink, getInviteUrl } = useTelegram();
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -42,8 +45,16 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
     return () => tl.kill();
   }, []);
 
-  const handleStart = () => {
-    onStart();
+  const handleInvite = () => {
+    if (isTelegram) {
+      openInviteLink(code);
+    } else {
+      const url = getInviteUrl(code) ?? `${window.location.href}#join=${code}`;
+      navigator.clipboard?.writeText(url).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    }
   };
 
   return (
@@ -79,6 +90,23 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
             </span>
           </div>
 
+          {/* Invite friend button — only for host */}
+          {isHost && (
+            <button
+              onClick={handleInvite}
+              className="w-full font-cinzel tracking-widest uppercase text-xs px-4 py-3 rounded border border-stone-700/60 text-stone-300 hover:text-amber-300 hover:border-amber-700/60 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
+              style={{ background: 'rgba(255,255,255,0.03)' }}
+            >
+              {isTelegram ? (
+                <>✈ Invite Friend via Telegram</>
+              ) : copied ? (
+                <>✓ Link Copied!</>
+              ) : (
+                <>🔗 Copy Invite Link</>
+              )}
+            </button>
+          )}
+
           {/* Status */}
           {isHost && !opponentConnected && (
             <div className="space-y-2">
@@ -98,7 +126,7 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
               <button
                 className="w-full font-cinzel tracking-widest uppercase text-sm px-6 py-4 rounded border border-amber-700/50 text-amber-300 transition-all duration-200 cursor-pointer hover:bg-amber-900/20"
                 style={{ background: 'rgba(180,120,0,0.08)' }}
-                onClick={handleStart}
+                onClick={onStart}
               >
                 ▶ Begin the Ordeal
               </button>

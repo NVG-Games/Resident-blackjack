@@ -1,35 +1,25 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import Peer from 'peerjs';
-
 /**
- * Lobby system via a well-known "broker" PeerJS ID.
+ * useLobby — room discovery via Supabase Realtime.
  *
- * Protocol (all messages are plain JS objects):
- *   Host → Broker:  { type: 'ANNOUNCE', room: { code, hostId, hostName, players } }
- *   Guest → Broker: { type: 'LIST' }
- *   Broker → Guest: { type: 'ROOMS', rooms: [...] }
- *   Host → Broker:  { type: 'REMOVE', code }
+ * Replaces the old PeerJS broker approach. The `rooms` table in Supabase
+ * acts as the lobby: hosts INSERT their room, guests SELECT and subscribe
+ * to realtime changes.
  *
- * The broker is just another Peer running in a browser tab (first to connect
- * claims the well-known ID). If the well-known ID is already taken, we fall
- * back to a "poor-man" broker that keeps the list in memory and answers LIST queries.
+ * Falls back gracefully when Supabase env vars are not configured
+ * (e.g. local dev without Supabase): returns an empty room list and
+ * announce/remove become no-ops.
  *
- * In practice the broker role is held by the peerjs-server sidecar (see compose.yaml).
- * Without it, any connected host also acts as an in-process broker.
+ * Table schema: see supabase/migrations/001_rooms.sql
  */
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { supabase } from '../lib/supabase.js';
 
-const BROKER_ID = 're7-21-lobby-broker';
+const SUPABASE_CONFIGURED =
+  Boolean(import.meta.env.VITE_SUPABASE_URL) &&
+  Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
 
-const PEER_CONFIG = (() => {
-  const host = import.meta.env.VITE_PEER_HOST;
-  const port = import.meta.env.VITE_PEER_PORT ? Number(import.meta.env.VITE_PEER_PORT) : 9000;
-  const path = import.meta.env.VITE_PEER_PATH || '/';
-  if (host) return { host, port, path, secure: port === 443 };
-  return {};
-})();
-
-// Generate a readable room code: WORD-NN
 const WORDS = ['WOLF', 'BILE', 'GORE', 'BONE', 'VILE', 'DUSK', 'RUST', 'GRIM', 'CLAW', 'RUIN'];
+
 export function generateRoomCode() {
   const w = WORDS[Math.floor(Math.random() * WORDS.length)];
   const n = String(Math.floor(Math.random() * 90) + 10);
@@ -37,138 +27,116 @@ export function generateRoomCode() {
 }
 
 /**
- * useLobby — manages room discovery via a broker peer.
+ * useLobby
  *
  * Returns:
- *   rooms          — current list of open rooms [{ code, hostId, hostName, players }]
- *   isBroker       — whether this client is acting as the broker
- *   announce(room) — host: publish room to broker
- *   remove(code)   — host: remove room from broker
- *   refresh()      — guest: request fresh room list
- *   loading        — true while waiting for room list
+ *   rooms    — current list of open rooms [{ code, host_peer_id, host_name, host_tg_id, players }]
+ *   loading  — true while fetching initial list
+ *   error    — string | null
+ *   announce(room) — host: insert/upsert room into Supabase
+ *   remove(code)   — host: delete room from Supabase
+ *   refresh()      — manually re-fetch room list
  */
 export function useLobby() {
-  const peerRef = useRef(null);
-  const brokerConnRef = useRef(null);
   const [rooms, setRooms] = useState([]);
-  const [isBroker, setIsBroker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const channelRef = useRef(null);
 
-  // In-process room list (used when this tab IS the broker)
-  const brokerRoomsRef = useRef({});
-  // Connections from hosts/guests to us (when broker)
-  const brokerConnsRef = useRef([]);
+  const fetchRooms = useCallback(async () => {
+    if (!SUPABASE_CONFIGURED) return;
+    setLoading(true);
+    setError(null);
+    const { data, error: err } = await supabase
+      .from('rooms')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-  const broadcastRoomsToBrokerConns = useCallback(() => {
-    const rooms = Object.values(brokerRoomsRef.current);
-    brokerConnsRef.current.forEach((c) => {
-      if (c.open) c.send({ type: 'ROOMS', rooms });
-    });
+    if (err) {
+      setError(err.message);
+    } else {
+      setRooms(data ?? []);
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    const peer = new Peer(BROKER_ID, PEER_CONFIG);
-    peerRef.current = peer;
+    if (!SUPABASE_CONFIGURED) return;
 
-    peer.on('open', () => {
-      // We claimed the broker ID — act as broker
-      setIsBroker(true);
-    });
+    fetchRooms();
 
-    peer.on('connection', (conn) => {
-      // Only relevant when acting as broker
-      brokerConnsRef.current.push(conn);
+    // Subscribe to realtime changes on the rooms table
+    const channel = supabase
+      .channel('lobby-rooms')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'rooms' },
+        (payload) => {
+          const { eventType, new: newRow, old: oldRow } = payload;
+          setRooms((prev) => {
+            if (eventType === 'INSERT') {
+              // Avoid duplicates
+              if (prev.some((r) => r.code === newRow.code)) return prev;
+              return [newRow, ...prev];
+            }
+            if (eventType === 'DELETE') {
+              return prev.filter((r) => r.code !== oldRow.code);
+            }
+            if (eventType === 'UPDATE') {
+              return prev.map((r) => (r.code === newRow.code ? newRow : r));
+            }
+            return prev;
+          });
+        },
+      )
+      .subscribe();
 
-      conn.on('data', (msg) => {
-        if (!msg?.type) return;
-
-        if (msg.type === 'ANNOUNCE') {
-          brokerRoomsRef.current[msg.room.code] = msg.room;
-          broadcastRoomsToBrokerConns();
-        } else if (msg.type === 'REMOVE') {
-          delete brokerRoomsRef.current[msg.code];
-          broadcastRoomsToBrokerConns();
-        } else if (msg.type === 'LIST') {
-          conn.send({ type: 'ROOMS', rooms: Object.values(brokerRoomsRef.current) });
-        }
-      });
-
-      conn.on('close', () => {
-        brokerConnsRef.current = brokerConnsRef.current.filter((c) => c !== conn);
-      });
-    });
-
-    peer.on('error', (err) => {
-      if (err.type === 'unavailable-id') {
-        // Broker is already running elsewhere — connect to it as a client
-        const fallbackPeer = new Peer(PEER_CONFIG);
-        peerRef.current = fallbackPeer;
-        peer.destroy();
-
-        fallbackPeer.on('open', () => {
-          _connectToBroker(fallbackPeer);
-        });
-      }
-    });
+    channelRef.current = channel;
 
     return () => {
-      peerRef.current?.destroy();
+      supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchRooms]);
 
-  const _connectToBroker = (peer) => {
-    const conn = peer.connect(BROKER_ID, { reliable: true });
-    brokerConnRef.current = conn;
-
-    conn.on('data', (msg) => {
-      if (msg?.type === 'ROOMS') {
-        setRooms(msg.rooms ?? []);
-        setLoading(false);
-      }
-    });
-  };
-
-  const announce = useCallback((room) => {
-    if (isBroker) {
-      brokerRoomsRef.current[room.code] = room;
-      broadcastRoomsToBrokerConns();
-      setRooms(Object.values(brokerRoomsRef.current));
-    } else {
-      brokerConnRef.current?.send({ type: 'ANNOUNCE', room });
-    }
-  }, [isBroker, broadcastRoomsToBrokerConns]);
-
-  const remove = useCallback((code) => {
-    if (isBroker) {
-      delete brokerRoomsRef.current[code];
-      broadcastRoomsToBrokerConns();
-      setRooms(Object.values(brokerRoomsRef.current));
-    } else {
-      brokerConnRef.current?.send({ type: 'REMOVE', code });
-    }
-  }, [isBroker, broadcastRoomsToBrokerConns]);
-
-  const refresh = useCallback(() => {
-    if (isBroker) {
-      setRooms(Object.values(brokerRoomsRef.current));
+  /**
+   * announce — host publishes a room.
+   * room: { code, host_peer_id, host_name, host_tg_id?, players? }
+   */
+  const announce = useCallback(async (room) => {
+    if (!SUPABASE_CONFIGURED) {
+      // Degrade gracefully: add room to local list only
+      setRooms((prev) => {
+        if (prev.some((r) => r.code === room.code)) return prev;
+        return [{ ...room, created_at: new Date().toISOString() }, ...prev];
+      });
       return;
     }
-    setLoading(true);
-    if (brokerConnRef.current?.open) {
-      brokerConnRef.current.send({ type: 'LIST' });
-    } else {
-      // Re-connect then ask
-      const peer = peerRef.current;
-      if (peer) {
-        _connectToBroker(peer);
-        // Small delay to let connection open
-        setTimeout(() => {
-          brokerConnRef.current?.send({ type: 'LIST' });
-        }, 800);
-      }
-    }
-  }, [isBroker]);
 
-  return { rooms, isBroker, loading, announce, remove, refresh };
+    const { error: err } = await supabase.from('rooms').upsert({
+      code: room.code,
+      host_peer_id: room.host_peer_id,
+      host_name: room.host_name ?? null,
+      host_tg_id: room.host_tg_id ?? null,
+      players: room.players ?? 1,
+    });
+
+    if (err) setError(err.message);
+  }, []);
+
+  /**
+   * remove — host deletes their room (on leave or game start).
+   */
+  const remove = useCallback(async (code) => {
+    if (!SUPABASE_CONFIGURED) {
+      setRooms((prev) => prev.filter((r) => r.code !== code));
+      return;
+    }
+
+    const { error: err } = await supabase.from('rooms').delete().eq('code', code);
+    if (err) setError(err.message);
+  }, []);
+
+  const refresh = fetchRooms;
+
+  return { rooms, loading, error, announce, remove, refresh };
 }

@@ -36,6 +36,11 @@ jobs:
           GITHUB_PAGES: 'true'
           # PeerJS: leave blank to use public cloud (no self-hosted server on Pages)
           VITE_PEER_HOST: ''
+          # Supabase — store these as GitHub Actions secrets in repo Settings → Secrets
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          # Telegram bot username (no @ prefix)
+          VITE_TG_BOT_USERNAME: ${{ secrets.VITE_TG_BOT_USERNAME }}
         run: npm run build
 
       - name: Upload Pages artifact

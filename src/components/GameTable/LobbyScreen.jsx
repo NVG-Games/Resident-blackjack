@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { gsap } from 'gsap';
 import { useLobby, generateRoomCode } from '../../hooks/useLobby.js';
 import { usePeerContext } from '../../contexts/PeerContext.jsx';
+import { useTelegram } from '../../hooks/useTelegram.js';
 import { generateSeed } from '../../engine/deck.js';
 
 const panelStyle = {
@@ -19,16 +20,18 @@ const btnBase =
  *   onBack()                            — go back to main menu
  *   onHostReady({ code, seed, isHost }) — host waiting room ready
  *   onJoinReady({ code, seed, isHost }) — guest waiting room ready
+ *   initialJoinCode?                    — pre-fill join code (from deep-link)
  */
-export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
+export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJoinCode }) {
   const containerRef = useRef(null);
-  const { rooms, loading, announce, remove, refresh } = useLobby();
+  const { rooms, loading, error, announce, remove, refresh } = useLobby();
   const { peerId, peerStatus, connStatus, initPeer, connectToPeer, onData, onOpen } = usePeerContext();
+  const { tgUser, isTelegram } = useTelegram();
 
   const [isHosting, setIsHosting] = useState(false);
   const [hostCode, setHostCode] = useState(null);
   const [hostSeed, setHostSeed] = useState(null);
-  const [joinStatus, setJoinStatus] = useState(null); // null | 'connecting'
+  const [joinStatus, setJoinStatus] = useState(null);
 
   // Entrance animation
   useEffect(() => {
@@ -40,12 +43,16 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
     );
   }, []);
 
-  // Auto-refresh rooms every 5 s
+  // Auto-join if opened via deep-link
   useEffect(() => {
-    refresh();
-    const id = setInterval(refresh, 5000);
-    return () => clearInterval(id);
-  }, [refresh]);
+    if (!initialJoinCode) return;
+    // Wait until rooms are loaded, then try to find and join the room
+    if (!loading && rooms.length > 0) {
+      const target = rooms.find((r) => r.code === initialJoinCode);
+      if (target) handleJoinRoom(target);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialJoinCode, loading, rooms]);
 
   // Register data listener: guest receives GAME_INFO from host
   useEffect(() => {
@@ -69,8 +76,17 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
   // Announce to lobby when peerId is available after hosting
   useEffect(() => {
     if (!isHosting || !peerId || !hostCode) return;
-    announce({ code: hostCode, hostId: peerId, hostName: 'Clancy', players: '1/2' });
-  }, [isHosting, peerId, hostCode, announce]);
+    const hostName = tgUser
+      ? (tgUser.first_name + (tgUser.last_name ? ` ${tgUser.last_name}` : ''))
+      : 'Clancy';
+    announce({
+      code: hostCode,
+      host_peer_id: peerId,
+      host_name: hostName,
+      host_tg_id: tgUser?.id ?? null,
+      players: 1,
+    });
+  }, [isHosting, peerId, hostCode, announce, tgUser]);
 
   const handleHostGame = () => {
     const code = generateRoomCode();
@@ -78,7 +94,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
     setHostCode(code);
     setHostSeed(seed);
     setIsHosting(true);
-    initPeer(); // creates peer if not already created
+    initPeer();
   };
 
   const handleCancelHost = () => {
@@ -91,25 +107,20 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
   const handleJoinRoom = (room) => {
     setJoinStatus('connecting');
     initPeer();
-    // Try connecting; if peerId not ready yet, wait for it
+    const hostPeerId = room.host_peer_id ?? room.hostId;
     if (peerId) {
-      connectToPeer(room.hostId);
+      connectToPeer(hostPeerId);
     } else {
-      // Poll until peer is ready
-      const check = setInterval(() => {
-        // peerId state will update, handled in useEffect
-      }, 200);
-      pendingJoinRef.current = { room, intervalId: check };
+      pendingJoinRef.current = { hostPeerId, intervalId: null };
     }
   };
 
   const pendingJoinRef = useRef(null);
   useEffect(() => {
     if (!peerId || !pendingJoinRef.current) return;
-    const { room, intervalId } = pendingJoinRef.current;
-    clearInterval(intervalId);
+    const { hostPeerId } = pendingJoinRef.current;
     pendingJoinRef.current = null;
-    connectToPeer(room.hostId);
+    connectToPeer(hostPeerId);
   }, [peerId, connectToPeer]);
 
   const handleManualConnect = (remotePeerId) => {
@@ -118,9 +129,14 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
     if (peerId) {
       connectToPeer(remotePeerId);
     } else {
-      pendingJoinRef.current = { room: { hostId: remotePeerId }, intervalId: null };
+      pendingJoinRef.current = { hostPeerId: remotePeerId, intervalId: null };
     }
   };
+
+  // Telegram user display name
+  const displayName = tgUser
+    ? `${tgUser.first_name}${tgUser.username ? ` @${tgUser.username}` : ''}`
+    : null;
 
   return (
     <div
@@ -143,6 +159,15 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
           <p className="text-stone-500 text-center text-sm mt-1 italic">
             Play against another survivor over the internet
           </p>
+          {/* Telegram user badge */}
+          {displayName && (
+            <div className="flex items-center justify-center gap-2 mt-3">
+              <span className="text-base">✈</span>
+              <span className="font-cinzel text-xs text-amber-400 tracking-widest">
+                {displayName}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="p-8 space-y-6">
@@ -183,6 +208,13 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
               >
                 Cancel
               </button>
+            </div>
+          )}
+
+          {/* Error banner */}
+          {error && (
+            <div className="text-red-400 text-xs font-cinzel text-center py-2 border border-red-900/30 rounded">
+              Lobby error: {error}
             </div>
           )}
 
@@ -228,6 +260,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
 
           {/* Manual peer ID connect */}
           <ManualJoin
+            initialValue={initialJoinCode ?? ''}
             onJoin={handleManualConnect}
             disabled={isHosting}
             status={joinStatus}
@@ -249,12 +282,15 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady }) {
 }
 
 function RoomRow({ room, onJoin, disabled }) {
+  const hostLabel = room.host_name ?? room.hostName ?? 'Unknown';
   return (
     <div className="flex items-center justify-between px-4 py-3 border-b border-red-900/10 last:border-b-0 hover:bg-red-900/5 transition-colors">
       <div className="flex items-center gap-3">
         <span className="text-lg">🎮</span>
-        <span className="font-cinzel text-amber-200 tracking-widest text-sm">{room.code}</span>
-        <span className="text-stone-600 text-xs">{room.players ?? '1/2'}</span>
+        <div>
+          <span className="font-cinzel text-amber-200 tracking-widest text-sm">{room.code}</span>
+          <span className="block text-stone-600 text-xs italic">{hostLabel}</span>
+        </div>
       </div>
       <button
         className={`${
@@ -271,8 +307,15 @@ function RoomRow({ room, onJoin, disabled }) {
   );
 }
 
-function ManualJoin({ onJoin, disabled, status }) {
+function ManualJoin({ onJoin, disabled, status, initialValue }) {
   const inputRef = useRef(null);
+
+  // Pre-fill from deep-link
+  useEffect(() => {
+    if (initialValue && inputRef.current) {
+      inputRef.current.value = initialValue;
+    }
+  }, [initialValue]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -292,7 +335,7 @@ function ManualJoin({ onJoin, disabled, status }) {
       <button
         type="submit"
         disabled={disabled || status === 'connecting'}
-        className={`font-cinzel tracking-widest uppercase text-xs px-4 py-2 rounded border border-red-900/40 text-red-300 hover:bg-red-900/20 transition-all cursor-pointer`}
+        className="font-cinzel tracking-widest uppercase text-xs px-4 py-2 rounded border border-red-900/40 text-red-300 hover:bg-red-900/20 transition-all cursor-pointer"
       >
         {status === 'connecting' ? '…' : 'Connect'}
       </button>
