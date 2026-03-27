@@ -31,9 +31,10 @@ export default function ActionButtons({
 
   useEffect(() => {
     if (canAct && hitRef.current && standRef.current) {
+      // Animate in — no opacity manipulation, buttons are always visible via CSS
       gsap.fromTo([hitRef.current, standRef.current],
-        { y: 10, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.3, stagger: 0.08, ease: 'back.out(1.5)' }
+        { y: 8, scale: 0.96 },
+        { y: 0, scale: 1, duration: 0.25, stagger: 0.06, ease: 'back.out(1.5)', clearProps: 'y,scale' }
       );
     }
   }, [canAct, showBotControls]);

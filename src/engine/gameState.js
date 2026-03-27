@@ -400,7 +400,13 @@ export function gameReducer(state, action) {
         };
       }
 
-      return { ...state, overlay: null, roundState: ROUND_STATE.DEALING };
+      return {
+        ...state,
+        overlay: null,
+        roundState: ROUND_STATE.DEALING,
+        playerStood: false,
+        botStood: false,
+      };
     }
 
     case ACTIONS.DISMISS_OVERLAY: {

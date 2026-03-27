@@ -1,6 +1,22 @@
 import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 
+// CSS keyframe for card deal-in — safe, never leaves transform artifacts
+const DEAL_STYLE = document.createElement('style');
+DEAL_STYLE.textContent = `
+@keyframes cardDealIn {
+  0%   { transform: translateY(-30px) scale(0.88); opacity: 0.6; }
+  100% { transform: translateY(0)     scale(1);    opacity: 1; }
+}
+.card-deal-in {
+  animation: cardDealIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+`;
+if (!document.head.querySelector('#card-anim-style')) {
+  DEAL_STYLE.id = 'card-anim-style';
+  document.head.appendChild(DEAL_STYLE);
+}
+
 // SVG face for a number card
 function CardFace({ value }) {
   const isRed = value % 3 === 0 || value === 7 || value === 11;
@@ -109,8 +125,8 @@ export default function Card({
   card,
   faceDown = false,
   isNew = false,
-  dealIndex = 0, // used to re-trigger enter animation when a new card at this slot appears
-  animateFrom = null, // { x, y } for deal animation
+  dealIndex = 0,
+  animateFrom = null,
   className = '',
   onClick,
   highlight = false,
@@ -118,59 +134,47 @@ export default function Card({
   const cardRef = useRef(null);
   const innerRef = useRef(null);
 
-  // Run enter animation on mount (card is new to the DOM) or when dealIndex changes
-  // We use card.id as a stable dep — when a new card replaces a slot, card.id changes → re-runs
-  useEffect(() => {
-    if (!cardRef.current || !isNew) return;
-
-    if (animateFrom) {
-      gsap.fromTo(cardRef.current,
-        { x: animateFrom.x, y: animateFrom.y, opacity: 0, scale: 0.6 },
-        { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.4)' }
-      );
-    } else {
-      gsap.fromTo(cardRef.current,
-        { y: -60, opacity: 0, scale: 0.7, rotation: -5 },
-        { y: 0, opacity: 1, scale: 1, rotation: 0, duration: 0.4, ease: 'back.out(1.2)' }
-      );
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [card?.id, isNew, animateFrom]);
-
-  // Flip animation when faceDown changes to false
+  // Flip animation when faceDown changes to false (hole card reveal)
   const prevFaceDown = useRef(faceDown);
   useEffect(() => {
     if (prevFaceDown.current === true && faceDown === false && innerRef.current) {
       gsap.fromTo(innerRef.current,
-        { rotateY: 180 },
-        { rotateY: 0, duration: 0.5, ease: 'power2.out' }
+        { rotateY: 90 },
+        { rotateY: 0, duration: 0.4, ease: 'power2.out', clearProps: 'rotateY' }
       );
     }
     prevFaceDown.current = faceDown;
   }, [faceDown]);
 
-  // Highlight pulse
+  // Highlight pulse — killed on unmount via cleanup
   useEffect(() => {
-    if (highlight && cardRef.current) {
-      gsap.to(cardRef.current, {
+    const el = cardRef.current;
+    if (!el) return;
+    if (highlight) {
+      gsap.to(el, {
         boxShadow: '0 0 25px rgba(255, 215, 0, 0.8)',
         scale: 1.06,
         duration: 0.6,
         repeat: -1,
         yoyo: true,
         ease: 'power1.inOut',
+        overwrite: true,
       });
-    } else if (cardRef.current) {
-      gsap.killTweensOf(cardRef.current);
-      gsap.to(cardRef.current, { boxShadow: '0 4px 20px rgba(0,0,0,0.8)', scale: 1, duration: 0.2 });
+    } else {
+      gsap.killTweensOf(el);
+      gsap.set(el, { clearProps: 'scale,boxShadow' });
     }
+    return () => {
+      gsap.killTweensOf(el);
+      gsap.set(el, { clearProps: 'scale,boxShadow' });
+    };
   }, [highlight]);
 
   return (
     <div
       ref={cardRef}
       onClick={onClick}
-      className={`relative cursor-pointer select-none ${className}`}
+      className={`relative cursor-pointer select-none ${isNew ? 'card-deal-in' : ''} ${className}`}
       style={{
         width: 'clamp(52px, 12vw, 80px)',
         height: 'clamp(73px, 17vw, 112px)',

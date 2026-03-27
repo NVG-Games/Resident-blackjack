@@ -78,6 +78,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   const tableRef = useRef(null);
   const stateRef = useRef(state);
+  // Prevents double-dispatch from rapid clicks — reset on every render
+  const actionPendingRef = useRef(false);
 
   // LLM bot — always call the hook (hooks can't be conditional), decide is a stable ref
   const { decide: llmDecide } = useLlmBot();
@@ -117,23 +119,21 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.roundState, state.overlay, isOnline, isHost]);
 
-  // Auto-resolve when both players have stood
-  // In online mode only host resolves (to stay authoritative)
+  // Auto-resolve when both players have stood OR when player busts and bot finishes.
+  // Trigger on roundState change — catches the case where playerStood was already true
+  // (bust auto-stand) before botStood flips, so playerStood dep alone wouldn't re-fire.
   useEffect(() => {
-    if (
-      state.roundState === ROUND_STATE.PLAYER_TURN &&
-      state.playerStood && state.botStood
-    ) {
-      if (isOnline && !isHost) return;
-      const t = setTimeout(() => {
-        const action = { type: ACTIONS.RESOLVE_ROUND };
-        if (isOnline) syncedDispatch(action);
-        else dispatch(action);
-      }, 700);
-      return () => clearTimeout(t);
-    }
+    if (state.roundState !== ROUND_STATE.PLAYER_TURN) return;
+    if (!state.playerStood || !state.botStood) return;
+    if (isOnline && !isHost) return;
+    const t = setTimeout(() => {
+      const action = { type: ACTIONS.RESOLVE_ROUND };
+      if (isOnline) syncedDispatch(action);
+      else dispatch(action);
+    }, 700);
+    return () => clearTimeout(t);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.playerStood, state.botStood, state.roundState, isOnline, isHost]);
+  }, [state.roundState, state.playerStood, state.botStood, isOnline, isHost]);
 
   // Shake on round loss
   useEffect(() => {
@@ -177,11 +177,10 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   // AI Bot / LLM Bot logic — disabled in hot-seat and online modes
   //
-  // Design: the effect triggers on roundState change only. Inside, it runs a self-contained
-  // async loop using stateRef (always current). After each BOT_ACTION dispatch the reducer
-  // either keeps roundState=BOT_TURN (hit) or flips to PLAYER_TURN (stand/bust).
-  // When roundState flips back to BOT_TURN next round, the effect re-runs.
-  // A cancelledRef prevents stale closures from dispatching after unmount or round change.
+  // Design: ONE action per effect run. The effect fires when roundState===BOT_TURN.
+  // After dispatch, the reducer either keeps BOT_TURN (bot hit, wants another card) or
+  // switches to PLAYER_TURN (bot stood/bust). When roundState changes, the effect re-runs
+  // for the next decision. This avoids any stale-state race conditions from async loops.
   useEffect(() => {
     if (isHotSeat || isOnline) return;
     if (state.roundState !== ROUND_STATE.BOT_TURN) return;
@@ -189,80 +188,68 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
     let cancelled = false;
 
-    async function runBotLoop() {
-      // Loop: keep taking actions while it's BOT_TURN and not cancelled
-      while (!cancelled) {
-        const s = stateRef.current;
-        if (s.roundState !== ROUND_STATE.BOT_TURN || s.gameOver) break;
-
-        if (s.botStood) {
-          await wait(150);
-          if (cancelled) break;
-          dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
-          break;
-        }
-
-        setIsThinking(true);
-
-        if (isLlm) {
-          const decision = await llmDecideRef.current(s);
-          if (cancelled) break;
-          setIsThinking(false);
-          if (!decision) break;
-          if (decision.reasoning) setLlmReasoning(decision.reasoning);
-          dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
-          // After dispatch stateRef will update on next render; wait a tick
-          await wait(50);
-        } else {
-          const delay = BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
-          await wait(delay);
-          if (cancelled) break;
-          setIsThinking(false);
-          const decision = getBotDecision(stateRef.current);
-          dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
-          // Small pause so React re-renders and stateRef gets updated before next loop iter
-          await wait(50);
-        }
+    async function takeBotTurn() {
+      if (state.botStood) {
+        await wait(150);
+        if (cancelled) return;
+        dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
+        return;
       }
-      if (!cancelled) setIsThinking(false);
+
+      setIsThinking(true);
+
+      if (isLlm) {
+        const decision = await llmDecideRef.current(stateRef.current);
+        if (cancelled) return;
+        setIsThinking(false);
+        if (!decision) return;
+        if (decision.reasoning) setLlmReasoning(decision.reasoning);
+        dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
+      } else {
+        const delay = BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
+        await wait(delay);
+        if (cancelled) return;
+        setIsThinking(false);
+        dispatch({ type: ACTIONS.BOT_ACTION, payload: getBotDecision(stateRef.current) });
+      }
     }
 
-    runBotLoop();
+    takeBotTurn();
     return () => { cancelled = true; setIsThinking(false); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.roundState, state.gameOver, isHotSeat, isOnline, isLlm]);
+  }, [state.roundState, state.botHand.length, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm]);
 
   stateRef.current = state;
+  actionPendingRef.current = false; // reset after each render — state has been applied
+
+  // Dispatch helper with double-click guard
+  const guardedDispatch = useCallback((a) => {
+    if (actionPendingRef.current) return;
+    actionPendingRef.current = true;
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
 
   // Player 1 actions (PLAYER_TURN) — mirrored to peer in online mode
   const handleHit = useCallback(() => {
-    const a = { type: ACTIONS.PLAYER_HIT };
-    if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+    guardedDispatch({ type: ACTIONS.PLAYER_HIT });
+  }, [guardedDispatch]);
   const handleStand = useCallback(() => {
-    const a = { type: ACTIONS.PLAYER_STAND };
-    if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+    guardedDispatch({ type: ACTIONS.PLAYER_STAND });
+  }, [guardedDispatch]);
   const handlePlayTrump = useCallback((trump) => {
-    const a = { type: ACTIONS.PLAYER_USE_TRUMP, trump };
-    if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+    guardedDispatch({ type: ACTIONS.PLAYER_USE_TRUMP, trump });
+  }, [guardedDispatch]);
 
-  // Player 2 actions:
-  // - hot-seat: human controls bot slot, dispatches BOT_ACTION locally
-  // - online (guest/Hoffman): guest's moves are their "player" perspective but engine sees them as BOT
+  // Player 2 actions (hot-seat / online guest)
   const handleBotHit = useCallback(() => {
-    const a = { type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } };
-    if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } });
+  }, [guardedDispatch]);
   const handleBotStand = useCallback(() => {
-    const a = { type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } };
-    if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
+  }, [guardedDispatch]);
   const handleBotPlayTrump = useCallback((trump) => {
-    const a = { type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } };
-    if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } });
+  }, [guardedDispatch]);
 
   const handleDismissOverlay = useCallback(() => {
     if (state.gameOver) {

@@ -17,7 +17,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
       <div className="flex items-end gap-1 sm:gap-2" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
         {playerHand.length > 0 && (
           <div className="relative">
-            <Card card={playerHand[0]} faceDown={false} isNew={true} />
+            <Card key={playerHand[0].id} card={playerHand[0]} faceDown={false} isNew={true} />
             {/* Hole card label — only visible to this player */}
             <div className="absolute -bottom-4 left-0 right-0 text-center">
               <span className="text-xs text-stone-500 font-fell italic">
