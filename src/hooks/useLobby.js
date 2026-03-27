@@ -125,14 +125,24 @@ export function useLobby() {
 
   /**
    * remove — host deletes their room (on leave or game start).
+   * @param {string} code - room code
+   * @param {string} [hostPeerId] - peer ID of the host; used to scope the DELETE so
+   *   only the row belonging to this peer is affected (defence-in-depth alongside RLS).
    */
-  const remove = useCallback(async (code) => {
+  const remove = useCallback(async (code, hostPeerId) => {
     if (!SUPABASE_CONFIGURED) {
       setRooms((prev) => prev.filter((r) => r.code !== code));
       return;
     }
 
-    const { error: err } = await supabase.from('rooms').delete().eq('code', code);
+    let query = supabase.from('rooms').delete().eq('code', code);
+    // Narrow the DELETE to the host's own row so a stale or replayed request
+    // cannot delete someone else's room even if RLS is misconfigured.
+    if (hostPeerId) {
+      query = query.eq('host_peer_id', hostPeerId);
+    }
+
+    const { error: err } = await query;
     if (err) setError(err.message);
   }, []);
 

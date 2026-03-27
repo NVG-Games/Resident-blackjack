@@ -24,12 +24,34 @@ import { SYSTEM_PROMPT, buildStateMessage } from './prompt.js'
 const PORT = process.env.MCP_PORT ?? 3333
 const MODEL = process.env.LLM_MODEL ?? 'claude-3-5-haiku-20241022'
 
+// Restrict CORS to known origins.
+// MCP_ALLOWED_ORIGINS env var accepts a comma-separated list.
+// Defaults to localhost variants for local dev.
+const DEFAULT_ORIGINS = [
+  'http://localhost:5173',   // Vite dev server
+  'http://localhost:8080',   // Docker nginx
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:8080',
+]
+const ALLOWED_ORIGINS = process.env.MCP_ALLOWED_ORIGINS
+  ? process.env.MCP_ALLOWED_ORIGINS.split(',').map(s => s.trim()).filter(Boolean)
+  : DEFAULT_ORIGINS
+
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 })
 
 const app = express()
-app.use(cors())
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (curl, server-to-server, health checks)
+    if (!origin) return callback(null, true)
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true)
+    callback(new Error(`CORS: origin not allowed: ${origin}`))
+  },
+  methods: ['POST', 'GET'],
+  allowedHeaders: ['Content-Type'],
+}))
 app.use(express.json({ limit: '256kb' }))
 
 // ── Tool definition ──────────────────────────────────────────────────────────

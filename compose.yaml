@@ -39,7 +39,7 @@ services:
   # Optional self-hosted PeerJS signalling server.
   # Remove the `depends_on` block above and this service if you prefer the public PeerJS cloud.
   peerjs:
-    image: peerjs/peerjs-server:latest
+    image: peerjs/peerjs-server:1.1.0-rc.2
     container_name: resident-blackjack-peerjs
     ports:
       - "9000:9000"
@@ -75,6 +75,8 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required for the mcp service}
       LLM_MODEL: ${LLM_MODEL:-claude-3-5-haiku-20241022}
       MCP_PORT: 3333
+      # Origins allowed to call /decide (CORS). In production set to your deployed app URL.
+      MCP_ALLOWED_ORIGINS: ${MCP_ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:5173}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3333/health"]
