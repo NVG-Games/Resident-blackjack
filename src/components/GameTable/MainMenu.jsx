@@ -209,6 +209,27 @@ export default function MainMenu({ onStart }) {
           >
             Multiplayer (P2P)
           </button>
+          <button
+            className={btnBase}
+            style={{
+              ...btnStyle,
+              borderColor: '#2a4a1a',
+              background: 'linear-gradient(135deg, rgba(30,60,10,0.2), rgba(0,0,0,0.8))',
+              boxShadow: '0 0 20px rgba(30,60,10,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+              fontSize: '0.7rem',
+            }}
+            onMouseEnter={(e) => gsap.to(e.currentTarget, {
+              boxShadow: '0 0 40px rgba(40,100,10,0.6), inset 0 0 20px rgba(0,0,0,0.5)',
+              duration: 0.3,
+            })}
+            onMouseLeave={(e) => gsap.to(e.currentTarget, {
+              boxShadow: '0 0 20px rgba(30,60,10,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+              duration: 0.3,
+            })}
+            onClick={() => onStart({ mode: 'assistant' })}
+          >
+            🃏 Real Game Assistant
+          </button>
         </div>
 
       </div>

@@ -4,9 +4,10 @@ import MainMenu from './components/GameTable/MainMenu.jsx';
 import RoleSelect from './components/GameTable/RoleSelect.jsx';
 import LobbyScreen from './components/GameTable/LobbyScreen.jsx';
 import WaitingRoom from './components/GameTable/WaitingRoom.jsx';
+import AssistantMode from './components/GameTable/AssistantMode.jsx';
 
 export default function App() {
-  // screen: 'menu' | 'roleselect' | 'lobby' | 'waiting' | 'game'
+  // screen: 'menu' | 'roleselect' | 'lobby' | 'waiting' | 'game' | 'assistant'
   const [screen, setScreen] = useState('menu');
   const [gameConfig, setGameConfig] = useState({ mode: 'ai', playerRole: 'clancy' });
 
@@ -23,6 +24,8 @@ export default function App() {
       setScreen('roleselect');
     } else if (mode === 'online') {
       setScreen('lobby');
+    } else if (mode === 'assistant') {
+      setScreen('assistant');
     }
   };
 
@@ -98,6 +101,9 @@ export default function App() {
           seed={gameConfig.seed}
           onReturnToMenu={handleReturnToMenu}
         />
+      )}
+      {screen === 'assistant' && (
+        <AssistantMode onBack={handleBackToMenu} />
       )}
     </div>
   );
