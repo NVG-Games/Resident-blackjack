@@ -3,9 +3,14 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   plugins: [react()],
-  // When GITHUB_PAGES=true (set in CI), use the repo name as base path.
-  // Locally and in Docker it stays '/' so nothing breaks.
-  base: process.env.GITHUB_PAGES === 'true' ? '/Resident-blackjack/' : '/',
+  // GITHUB_PAGES=true → repo-relative base for GitHub Pages CI.
+  // CAPACITOR=true    → relative './' for iOS WKWebView bundle (file:// origin).
+  // Default '/'       → local dev and Docker.
+  base: process.env.GITHUB_PAGES === 'true'
+    ? '/Resident-blackjack/'
+    : process.env.CAPACITOR === 'true'
+      ? './'
+      : '/',
   test: {
     environment: 'node',
     include: ['src/**/*.test.js'],

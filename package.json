@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:ios": "CAPACITOR=true vite build && npx cap sync ios",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.3.0",
+    "@capacitor/core": "^8.3.0",
+    "@capacitor/ios": "^8.3.0",
     "@supabase/supabase-js": "^2.100.1",
     "gsap": "^3.12.5",
     "peerjs": "^1.5.5",

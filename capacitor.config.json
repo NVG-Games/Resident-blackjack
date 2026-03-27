@@ -1,0 +1,9 @@
+{
+  "appId": "com.re721.game",
+  "appName": "21 — Resident Evil 7",
+  "webDir": "dist",
+  "ios": {
+    "contentInset": "always",
+    "scrollEnabled": false
+  }
+}
