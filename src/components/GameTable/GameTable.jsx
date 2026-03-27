@@ -385,7 +385,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         onClick={() => setShowExitConfirm(true)}
         style={{
           position: 'absolute',
-          top: 'calc(6px + env(safe-area-inset-top))',
+          top: 6,
           left: 8,
           zIndex: 40,
           background: 'rgba(0,0,0,0.4)',
@@ -473,7 +473,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       )}
 
       {/* Main game layout — single column, fills viewport */}
-      <div className="relative z-20 flex flex-col h-full" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}>
+      <div className="relative z-20 flex flex-col h-full" style={{ paddingTop: 12 }}>
 
         {/* TOP: Bet panel */}
         <section className="flex-none w-full px-3 sm:px-6">
@@ -512,7 +512,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
         {/* CENTER: Deck (left, absolute) + Table Trumps (true center) */}
         <section className="flex-1 relative flex items-center justify-center w-full min-h-0 px-3 sm:px-6" style={{ zIndex: 5 }}>
-          <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 'max(12px, env(safe-area-inset-left))' }}>
+          <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 12 }}>
             <DeckPile count={state.deck.length} />
           </div>
           <TableTrumps
@@ -542,7 +542,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </section>
 
         {/* ACTION BUTTONS — in flow, at the bottom of flex column */}
-        <div className="flex-none z-30 mt-auto" style={{ background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '0 12px calc(12px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex-none z-30 mt-auto" style={{ background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Top info row — fixed height 64px, always occupies space */}
         {(() => {
           if (turnSecondsLeft !== null) {

@@ -81,7 +81,7 @@ export default function MainMenu({ onStart }) {
       />
 
       {/* Decorative cards above content */}
-      <div ref={cardsRef} className="relative z-10" style={{ display: 'flex', gap: 12, opacity: 0.15, marginBottom: 60, maxWidth: '100vw', overflow: 'hidden', paddingLeft: 8, paddingRight: 8 }}>
+      <div ref={cardsRef} className="relative z-10" style={{ display: 'flex', gap: 12, opacity: 0.15, marginBottom: 60, maxWidth: '100vw', padding: '16px 8px' }}>
         {[1, 5, 9, 3, 11, 7].map((val, i) => (
           <StartCard key={i} value={val} rotation={-15 + i * 6} />
         ))}

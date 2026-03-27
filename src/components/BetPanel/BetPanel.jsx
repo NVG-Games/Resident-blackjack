@@ -57,7 +57,7 @@ export default function BetPanel({ state, isGuestOnline = false }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '8px 16px',
+      padding: '8px 16px 8px 128px',
       background: 'rgba(0,0,0,0.45)',
       borderTop: '1px solid rgba(255,209,82,0.07)',
       borderBottom: '1px solid rgba(255,209,82,0.07)',

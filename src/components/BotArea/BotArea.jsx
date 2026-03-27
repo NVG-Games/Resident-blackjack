@@ -24,12 +24,12 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
 
       {/* Identity row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 30, color: '#e8d5b0', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {playerName}
           </div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#5a5040', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
             {isActivePlayer ? 'You' : 'Opponent'}
           </div>
         </div>
@@ -63,9 +63,8 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
   );
 }
 
-const CARD_W = 70;
-const MAX_ROW_W = 300;
-const SCORE_W = 80;
+const CARD_W = 58;
+const MAX_ROW_W = 260;
 
 function BotFanHand({ cards, faceDownCard, faceUpCards, showFaceDown, scoreColor, total, target, isBust, stood }) {
   const n = cards.length;
@@ -77,35 +76,34 @@ function BotFanHand({ cards, faceDownCard, faceUpCards, showFaceDown, scoreColor
   const displayScore = showFaceDown ? total : getHandTotal(faceUpCards);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-      {/* Cards fan + score as one block, centered together */}
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-      <div style={{ position: 'relative', width: rowW, height: 145, flexShrink: 0, marginTop: 60 }}>
+      <div style={{ position: 'relative', width: rowW, height: 110, flexShrink: 0, marginTop: 16 }}>
         {faceDownCard && (
           <div style={{ position: 'absolute', left: 0, bottom: 0, zIndex: 1 }}>
-            <Card card={faceDownCard} faceDown={!showFaceDown} isNew={true} />
+            <Card card={faceDownCard} faceDown={!showFaceDown} isNew={true} size="sm" />
           </div>
         )}
         {faceUpCards.map((card, idx) => (
           <div key={card.id} style={{ position: 'absolute', left: (idx + 1) * step, bottom: 0, zIndex: idx + 2 }}>
-            <Card card={card} faceDown={false} isNew={true} dealIndex={idx} />
+            <Card card={card} faceDown={false} isNew={true} dealIndex={idx} size="sm" />
           </div>
         ))}
       </div>
 
       {/* Score — below cards */}
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-        <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 52, lineHeight: 1, color: scoreColor }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+        <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 38, lineHeight: 1, color: scoreColor }}>
           {displayScore}
           {!showFaceDown && displayScore > 0 && (
-            <span style={{ fontSize: 22, color: '#3a3428', marginLeft: 4 }}>+?</span>
+            <span style={{ fontSize: 16, color: '#3a3428', marginLeft: 3 }}>+?</span>
           )}
         </span>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: isBust ? '#e57373' : '#5a5040' }}>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: isBust ? '#e57373' : '#5a5040' }}>
           {isBust ? 'BUST' : `of ${target}`}
         </span>
         {stood && !isBust && (
-          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a5040', letterSpacing: '0.1em' }}>· stood</span>
+          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#5a5040', letterSpacing: '0.1em' }}>· stood</span>
         )}
       </div>
       </div>
@@ -117,14 +115,14 @@ function HealthBar({ health, maxHealth }) {
   const pips = Array.from({ length: maxHealth }, (_, i) => i < health);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 28, color: '#e8d5b0' }}>
-        {health}<span style={{ fontSize: 18, color: '#5a5040' }}>/{maxHealth}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0' }}>
+        {health}<span style={{ fontSize: 13, color: '#5a5040' }}>/{maxHealth}</span>
       </div>
-      <div style={{ display: 'flex', gap: 3 }}>
+      <div style={{ display: 'flex', gap: 2 }}>
         {pips.map((alive, i) => (
           <div key={i} style={{
-            width: 11, height: 20, borderRadius: 1, transition: 'all 0.35s',
+            width: 9, height: 15, borderRadius: 1, transition: 'all 0.35s',
             background: alive ? '#e8d5b0' : 'transparent',
             border: alive ? 'none' : '1px solid #2a2218',
             boxShadow: alive ? '0 0 4px rgba(232,213,176,0.2)' : 'none',

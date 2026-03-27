@@ -127,6 +127,10 @@ export default function App() {
         background: '#0d0805',
         height: '100dvh',
         boxSizing: 'border-box',
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
       }}
     >
       {/* Disconnect notification */}
