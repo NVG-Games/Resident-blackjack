@@ -4,7 +4,7 @@ This file gives AI coding assistants full context about the project so they can 
 
 ## Project Identity
 
-**Name:** 21 — Resident Evil 7 Card Game  
+**Name:** Resident Blackjack Card Game  
 **Repo:** Resident-blackjack  
 **Stack:** React 19.2.4 · Vite 6 · GSAP 3.12 · Tailwind CSS 3.4  
 **Language:** JavaScript ESM (no TypeScript)  

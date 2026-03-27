@@ -1,4 +1,4 @@
-# 21 — Resident Evil 7 Card Game
+# Resident Blackjack Card Game
 
 A faithful web recreation of the card game "21" from **Resident Evil 7: Biohazard**, built with React 19, GSAP animations, and Tailwind CSS.
 
