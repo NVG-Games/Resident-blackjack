@@ -88,7 +88,7 @@ export default function RoleSelect({ onConfirm, onBack }) {
         style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.75) 100%)' }}
       />
 
-      <div className="relative z-10 flex flex-col items-center w-full text-center" style={{ padding: '24px 16px', gap: 28, maxWidth: 600, margin: '0 auto' }}>
+      <div className="relative z-10 flex flex-col items-center w-full text-center" style={{ padding: '10px 16px', gap: 20, maxWidth: 600, margin: '0 auto' }}>
 
         {/* Title */}
         <div ref={titleRef}>

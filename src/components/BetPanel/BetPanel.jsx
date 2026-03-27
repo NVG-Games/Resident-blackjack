@@ -4,7 +4,7 @@ import { getEffectiveTarget, computeBetModifiers } from '../../engine/trumpEngin
 import { getHandTotal } from '../../engine/deck.js';
 import { PHASE_CONFIG } from '../../engine/constants.js';
 
-export default function BetPanel({ state, isGuestOnline = false }) {
+export default function BetPanel({ state, isGuestOnline = false, onMenuClick }) {
   const {
     playerBet, botBet, phase, roundNumber,
     playerTableTrumps, botTableTrumps,
@@ -57,7 +57,7 @@ export default function BetPanel({ state, isGuestOnline = false }) {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '8px 16px 8px 128px',
+      padding: '8px 16px',
       background: 'rgba(0,0,0,0.45)',
       borderTop: '1px solid rgba(255,209,82,0.07)',
       borderBottom: '1px solid rgba(255,209,82,0.07)',
@@ -65,6 +65,30 @@ export default function BetPanel({ state, isGuestOnline = false }) {
       boxSizing: 'border-box',
       gap: 0,
     }}>
+
+      {/* Menu button — left slot */}
+      {onMenuClick && (
+        <button
+          onClick={onMenuClick}
+          style={{
+            marginRight: 'auto',
+            background: 'rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,209,82,0.25)',
+            borderRadius: 6,
+            cursor: 'pointer',
+            padding: '6px 12px',
+            fontFamily: 'Cinzel, serif',
+            fontSize: 14,
+            color: 'rgba(122,106,80,0.8)',
+            letterSpacing: '0.05em',
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(232,213,176,0.95)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.5)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(122,106,80,0.8)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.25)'; }}
+        >
+          ← Menu
+        </button>
+      )}
 
       {/* Phase */}
       <div style={cell}>

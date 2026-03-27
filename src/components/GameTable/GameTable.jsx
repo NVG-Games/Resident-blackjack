@@ -114,7 +114,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       if (isOnline && !isHost) return; // guest waits for host's START_ROUND via data channel
       const t = setTimeout(() => {
         const action = isOnline
-          ? { type: ACTIONS.START_ROUND, seed: seedProp ?? generateSeed() }
+          ? { type: ACTIONS.START_ROUND, seed: generateSeed() }
           : { type: ACTIONS.START_ROUND };
         if (isOnline) {
           syncedDispatch(action);
@@ -380,34 +380,6 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         style={{ background: 'linear-gradient(180deg, transparent, rgba(255,209,82,0.15) 20%, rgba(255,209,82,0.15) 80%, transparent)' }}
       />
 
-      {/* Exit button — top-left corner */}
-      <button
-        onClick={() => setShowExitConfirm(true)}
-        style={{
-          position: 'absolute',
-          top: 6,
-          left: 8,
-          zIndex: 40,
-          background: 'rgba(0,0,0,0.4)',
-          border: '1px solid rgba(255,209,82,0.15)',
-          borderRadius: 6,
-          cursor: 'pointer',
-          padding: '10px 16px',
-          fontFamily: 'Cinzel, serif',
-          fontSize: 16,
-          color: 'rgba(122,106,80,0.8)',
-          letterSpacing: '0.05em',
-          lineHeight: 1,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-        }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(232,213,176,0.95)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.35)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(122,106,80,0.8)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.15)'; }}
-      >
-        ← Menu
-      </button>
-
       {/* Exit confirmation modal */}
       {showExitConfirm && (
         <div
@@ -477,7 +449,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
         {/* TOP: Bet panel */}
         <section className="flex-none w-full px-3 sm:px-6">
-          <BetPanel state={state} isGuestOnline={isOnline && !isHost} />
+          <BetPanel state={state} isGuestOnline={isOnline && !isHost} onMenuClick={() => setShowExitConfirm(true)} />
         </section>
 
         {/* Opponent area */}
@@ -512,7 +484,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
         {/* CENTER: Deck (left, absolute) + Table Trumps (true center) */}
         <section className="flex-1 relative flex items-center justify-center w-full min-h-0 px-3 sm:px-6" style={{ zIndex: 5 }}>
-          <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 12 }}>
+          <div className="absolute top-2" style={{ left: 12 }}>
             <DeckPile count={state.deck.length} />
           </div>
           <TableTrumps
@@ -649,17 +621,19 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
 function DeckPile({ count }) {
   const stackCount = Math.min(count, 3);
+  const W = 38;
+  const H = 54;
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div className="relative" style={{ width: 72, height: 100 }}>
+    <div className="flex flex-col items-center gap-1">
+      <div className="relative" style={{ width: W + 4, height: H + 4 }}>
         {count > 0 ? (
           Array.from({ length: stackCount }, (_, i) => (
             <div
               key={i}
               className="absolute rounded"
               style={{
-                width: 66,
-                height: 94,
+                width: W,
+                height: H,
                 top: (stackCount - 1 - i) * 2,
                 left: (stackCount - 1 - i) * 1,
                 background: i === stackCount - 1
@@ -667,28 +641,25 @@ function DeckPile({ count }) {
                   : 'linear-gradient(145deg, #160f08, #0a0704)',
                 zIndex: i,
                 border: `1px solid rgba(255,209,82,${i === stackCount - 1 ? '0.2' : '0.08'})`,
-                boxShadow: i === stackCount - 1 ? '0 2px 12px rgba(0,0,0,0.9)' : 'none',
+                boxShadow: i === stackCount - 1 ? '0 2px 8px rgba(0,0,0,0.9)' : 'none',
               }}
             >
               {i === stackCount - 1 && (
-                <div className="w-full h-full flex flex-col items-center justify-center">
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center"
-                    style={{ border: '1px solid rgba(255,209,82,0.25)' }}>
-                    <span style={{ fontSize: 18, color: 'rgba(255,209,82,0.4)' }}>✦</span>
-                  </div>
+                <div className="w-full h-full flex items-center justify-center">
+                  <span style={{ fontSize: 11, color: 'rgba(255,209,82,0.35)' }}>✦</span>
                 </div>
               )}
             </div>
           ))
         ) : (
-          <div className="w-16 h-20 border border-dashed border-stone-700 rounded
-            flex items-center justify-center">
-            <span className="text-stone-600 text-sm font-fell">—</span>
+          <div style={{ width: W, height: H, border: '1px dashed #3a3020', borderRadius: 3,
+            display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 10, color: '#3a3020' }}>—</span>
           </div>
         )}
       </div>
-      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#c4b9a8' }}>
-        {count} {count === 1 ? 'card' : 'cards'} remain
+      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#5a5040', letterSpacing: '0.04em' }}>
+        {count} {count === 1 ? 'card' : 'cards'}
       </span>
     </div>
   );

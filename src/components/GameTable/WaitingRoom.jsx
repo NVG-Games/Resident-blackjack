@@ -63,7 +63,7 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
       style={{ background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)' }}
     >
       <div ref={containerRef} className="w-full max-w-sm text-center" style={panelStyle}>
-        <div style={{ padding: '40px 32px 32px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
+        <div style={{ padding: '20px 24px 20px', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>
 
           {/* Room code */}
           <div>

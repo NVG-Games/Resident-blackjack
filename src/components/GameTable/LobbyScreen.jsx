@@ -172,7 +172,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
         boxSizing: 'border-box',
       }}>
         {/* Header */}
-        <div style={{ padding: '24px 8px 20px', borderBottom: '1px solid rgba(255,209,82,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ padding: '10px 8px 10px', borderBottom: '1px solid rgba(255,209,82,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <button
             className={btnBase}
             style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#7a6a50', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0' }}
@@ -203,7 +203,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
           display: 'grid',
           gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
           gap: 24,
-          padding: '24px 8px',
+          padding: '12px 8px',
           alignItems: 'start',
         }}>
           {/* LEFT COLUMN: Host */}
