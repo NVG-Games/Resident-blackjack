@@ -1,0 +1,34 @@
+---
+description: Project-wide conventions for the RE7 21 card game
+alwaysApply: true
+---
+
+# RE7 21 — Project Conventions
+
+## Stack
+
+React 19.2.4 · Vite 6 · GSAP 3.12 · Tailwind CSS 3.4 · JavaScript ESM (no TypeScript)
+
+## Do not
+
+- Run `npm run dev` — the dev server is always running in watch mode
+- Create `.env` files — none are needed
+- Add external state libraries (Redux, Zustand, etc.) — state lives in `useReducer` in `GameTable.jsx`
+- Add a router library — screen routing is a single `useState` in `App.jsx`
+- Import from `src/engine/` inside components except for constants/enums used for display
+
+## File structure
+
+```
+src/engine/        ← pure game logic, no React
+src/components/    ← React UI, reads state and dispatches actions
+src/assets/trumps/ ← PNG trump card images from RE Fandom Wiki
+```
+
+## CLAUDE.md
+
+`CLAUDE.md` in the project root contains full AI context including state shape, ROUND_STATE flow diagram, and documented gotchas. Read it before making significant changes to game logic.
+
+## Commit policy
+
+Never commit unless the user explicitly asks. Never push. Never amend past commits.

@@ -1,0 +1,47 @@
+---
+description: Game engine rules — apply when editing files in src/engine/
+globs: ["src/engine/**"]
+alwaysApply: false
+---
+
+# Game Engine Rules
+
+## State is immutable in the reducer
+
+`gameState.js` uses `useReducer`. Every case must return a new object — never mutate `state` directly.
+
+```js
+// CORRECT
+return { ...state, playerHand: [...state.playerHand, newCard] };
+
+// WRONG
+state.playerHand.push(newCard);
+return state;
+```
+
+## Bot turn continuity
+
+When the bot hits or plays a trump card and the player has **already stood**, `roundState` must stay `ROUND_STATE.BOT_TURN`:
+
+```js
+const nextTurn = state.playerStood ? ROUND_STATE.BOT_TURN : ROUND_STATE.PLAYER_TURN;
+```
+
+If you change this, the game will freeze after the player stands.
+
+## Face-down card convention
+
+`hand[0]` is always the face-down (hidden) card. `hand.slice(1)` are face-up cards. `getHandTotal(hand)` counts all cards including index 0.
+
+## Trump card effects
+
+All trump logic lives in `trumpEngine.js` → `applyTrump(trump, state, owner)`. It returns a **partial state object** that gets spread into the reducer return value. Never add trump logic directly inside `gameState.js` cases.
+
+## Adding a new trump type
+
+1. Add the constant to `TRUMP_TYPES` in `constants.js`
+2. Add it to `TRUMP_DEFINITIONS` with `name`, `description`, `icon`, `color`
+3. If permanent: add to `PERMANENT_TRUMPS` set
+4. Add to `PLAYER_TRUMP_POOL` and/or `BOT_TRUMP_POOL`
+5. Add handling in `applyTrump()` in `trumpEngine.js`
+6. Add PNG asset to `src/assets/trumps/` and map it in `trumpImages.js`

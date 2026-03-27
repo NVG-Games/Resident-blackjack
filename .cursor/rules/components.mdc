@@ -1,0 +1,38 @@
+---
+description: React component rules — apply when editing files in src/components/
+globs: ["src/components/**"]
+alwaysApply: false
+---
+
+# Component Rules
+
+## Styling
+
+- Use **Tailwind CSS** utility classes for layout, spacing, sizing
+- Use **inline `style` props** for precise colors, gradients, shadows, and box-shadows — Tailwind's palette does not have the exact dark RE7 colors
+- Font classes: `font-cinzel` (headings/buttons), `font-fell` (flavor text/italic), defined in `tailwind.config.js`
+- Never use default system fonts or `font-sans`
+
+## Animations
+
+- Use **GSAP** for entrance animations, card flips, screen shake, hover pulses
+- Do NOT use GSAP `onComplete` to trigger React state changes — it silently fails if the component unmounts mid-animation. Call state setters directly instead
+- Use `useRef` to target DOM elements for GSAP, not `document.querySelector`
+
+## Props to know
+
+`BotArea` and `PlayerArea` both accept:
+- `playerName` — overrides the displayed name label
+- `hideCards` — blurs the card area (hot-seat privacy)
+
+`TrumpCard` accepts `size`: `'hand' | 'table' | 'mini'`
+
+`ActionButtons` accepts `isHotSeat`, `showBotControls`, `activePlayerName`, `isBotTurnActive` for hot-seat mode
+
+## Hot-seat awareness
+
+Components should not hard-code "Clancy" or "Hoffman" — use the `playerName` prop passed from `GameTable`. In hot-seat mode, labels can be swapped.
+
+## No business logic in components
+
+Components read from `state` and call `dispatch` via callbacks. They never call game engine functions directly (no imports from `src/engine/` except for constants/enums used for display logic).
