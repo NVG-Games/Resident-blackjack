@@ -277,7 +277,8 @@ function PlayerPanel({
   usedValues, health, tableTrumps,
   onAdd, onRemove, onAddTrump, onRemoveTrump, onHealthChange,
 }) {
-  const available = ALL_VALUES.filter(v => !usedValues.includes(v) || cards.some(c => c.value === v));
+  // A card is unavailable to add if it's used by someone else (not in this player's own hand)
+  const myValues = cards.map(c => c.value);
 
   return (
     <div className="flex flex-col p-2 gap-2 min-h-0">
@@ -332,43 +333,38 @@ function PlayerPanel({
         </div>
       )}
 
-      {/* Cards in hand */}
-      <div>
-        <div className="text-xs text-stone-600 font-cinzel uppercase tracking-widest mb-1">Cards</div>
-        <div className="flex flex-wrap gap-1">
-          {cards.map(c => (
-            <button
-              key={c.id}
-              onClick={() => onRemove(c.value)}
-              className="font-cinzel font-bold rounded px-2 py-1 text-sm active:scale-90 transition-all"
-              style={{ background: 'rgba(139,0,0,0.3)', border: '1px solid #8b0000', color: '#f0e2c0' }}
-              title="Tap to remove"
-            >
-              {c.value} ✕
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Add card grid */}
+      {/* Add / remove card grid — highlighted cards are in hand, tap to toggle */}
       <div>
         <div className="text-xs text-stone-600 font-cinzel uppercase tracking-widest mb-1">Add card</div>
         <div className="grid grid-cols-4 gap-1">
           {ALL_VALUES.map(v => {
-            const alreadyUsed = usedValues.includes(v) && !cards.some(c => c.value === v);
+            // Disabled if taken by the OTHER player (not this one)
+            const takenByOther = usedValues.includes(v) && !myValues.includes(v);
+            // Already in this player's hand — show as selected, not disabled
+            const inHand = myValues.includes(v);
             return (
               <button
                 key={v}
-                onClick={() => !alreadyUsed && onAdd(v)}
-                disabled={alreadyUsed}
+                onClick={() => {
+                  if (takenByOther) return;
+                  if (inHand) onRemove(v); // tap again to remove
+                  else onAdd(v);
+                }}
+                disabled={takenByOther}
                 className="font-cinzel font-bold text-sm py-2 rounded active:scale-90 transition-all disabled:opacity-20"
                 style={{
-                  background: alreadyUsed ? 'rgba(0,0,0,0.2)' : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${alreadyUsed ? '#2a1a08' : '#5a3a18'}`,
-                  color: alreadyUsed ? '#4a3a28' : '#f0e2c0',
+                  background: takenByOther
+                    ? 'rgba(0,0,0,0.2)'
+                    : inHand
+                      ? 'rgba(139,0,0,0.35)'
+                      : 'rgba(255,255,255,0.05)',
+                  border: `1px solid ${takenByOther ? '#2a1a08' : inHand ? '#cc2222' : '#5a3a18'}`,
+                  color: takenByOther ? '#4a3a28' : inHand ? '#ff9999' : '#f0e2c0',
+                  boxShadow: inHand ? '0 0 8px rgba(180,0,0,0.4)' : 'none',
                 }}
+                title={inHand ? 'Tap to remove' : takenByOther ? 'Taken by opponent' : 'Add card'}
               >
-                {v}
+                {v}{inHand ? ' ✓' : ''}
               </button>
             );
           })}

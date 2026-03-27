@@ -61,23 +61,40 @@ export default function RoundResult({ result, onNext, state }) {
           </div>
         </div>
 
-        {/* Health change */}
-        <div className="text-center text-xs font-fell text-stone-400">
+        {/* Health change explanation */}
+        <div className="w-full rounded px-3 py-2 text-center font-fell text-sm"
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          {isWin && (
+            <span className="text-stone-300">
+              Hoffman loses{' '}
+              <span className="text-amber-400 font-bold text-base">{effectiveBotBet}</span>
+              <span className="text-stone-500"> hp</span>
+              <span className="text-stone-600 text-xs block italic">his stake — you won</span>
+            </span>
+          )}
           {!isWin && !isDraw && (
-            <span>You lose <span className="text-red-400 font-bold">{effectivePlayerBet}</span> health</span>
+            <span className="text-stone-300">
+              You lose{' '}
+              <span className="text-red-400 font-bold text-base">{effectivePlayerBet}</span>
+              <span className="text-stone-500"> hp</span>
+              <span className="text-stone-600 text-xs block italic">your stake — he won</span>
+            </span>
           )}
           {isDraw && (
-            <span>Both lose health: <span className="text-red-400 font-bold">{effectivePlayerBet}</span> / <span className="text-red-400 font-bold">{effectiveBotBet}</span></span>
-          )}
-          {isWin && (
-            <span>Opponent loses <span className="text-amber-400 font-bold">{effectiveBotBet}</span> health</span>
+            <div className="text-stone-400">
+              Both lose health
+              <div className="flex justify-center gap-4 mt-1">
+                <span>You: <span className="text-red-400 font-bold">−{effectivePlayerBet}</span></span>
+                <span>Him: <span className="text-red-400 font-bold">−{effectiveBotBet}</span></span>
+              </div>
+            </div>
           )}
         </div>
 
-        {/* Health bars */}
-        <div className="flex gap-4 sm:gap-6">
+        {/* Health bars — before/after */}
+        <div className="flex gap-6 sm:gap-10">
           <MiniHealth health={state.playerHealth} max={10} label="You" color="amber" />
-          <MiniHealth health={state.botHealth} max={10} label="Them" color="red" />
+          <MiniHealth health={state.botHealth} max={10} label="Hoffman" color="red" />
         </div>
 
         <button

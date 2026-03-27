@@ -125,7 +125,11 @@ export function gameReducer(state, action) {
         roundResult: null,
         winner: null,
         overlay: null,
-        log: [...state.log, { msg: `Round ${state.roundNumber + 1} begins.`, time: Date.now() }],
+        log: [
+          ...state.log,
+          { msg: `Round ${state.roundNumber + 1} begins.`, time: Date.now() },
+          { msg: `Each player receives 1 hidden card face-down.`, time: Date.now() + 1 },
+        ],
         roundNumber: state.roundNumber + 1,
         trumpsUsedThisTurn: 0,
         botTrumpsUsedThisTurn: 0,

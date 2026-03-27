@@ -9,6 +9,7 @@ export default function BetPanel({ state }) {
     playerTableTrumps, botTableTrumps,
     playerHand, botHand,
     playerTrumpHand, botTrumpHand,
+    playerHealth, botHealth,
   } = state;
 
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
@@ -50,18 +51,32 @@ export default function BetPanel({ state }) {
         {phase.replace('_', ' ')} · R{roundNumber}
       </div>
 
-      {/* Target + Bets in one row on mobile */}
+      {/* Health score — main scoreboard */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <span className="font-cinzel font-black text-amber-300" style={{ fontSize: '1.1rem' }}>{playerHealth}</span>
+        <span className="text-stone-600 font-fell text-xs">❤ You</span>
+        <span className="text-stone-700 font-cinzel text-sm font-bold">vs</span>
+        <span className="text-stone-600 font-fell text-xs">Him ❤</span>
+        <span className="font-cinzel font-black text-red-400" style={{ fontSize: '1.1rem' }}>{botHealth}</span>
+      </div>
+
+      {/* Target + Stakes */}
       <div className="flex items-center gap-3 sm:gap-6">
-        <div className="flex items-center gap-1.5">
-          <span className="text-stone-500 font-fell text-xs italic">→</span>
+        <div className="flex flex-col items-center">
+          <span className="text-stone-600 font-fell text-xs italic">target</span>
           <span ref={targetRef} className="font-cinzel text-xl sm:text-2xl font-bold text-amber-300">
             {target}
           </span>
         </div>
-        <div className="w-px h-6 bg-stone-700" />
-        <BetDisplay label="You" bet={effectivePlayerBet} base={playerBet} mod={playerBetMod} color="amber" compact />
-        <div className="w-px h-6 bg-stone-700" />
-        <BetDisplay label="Him" bet={effectiveBotBet} base={botBet} mod={botBetMod} color="red" compact />
+        <div className="w-px h-8 bg-stone-700" />
+        <div className="flex flex-col items-center">
+          <span className="text-stone-600 font-fell text-xs italic">loser pays</span>
+          <div className="flex items-center gap-1.5">
+            <BetDisplay label="You" bet={effectivePlayerBet} base={playerBet} mod={playerBetMod} color="amber" compact />
+            <span className="text-stone-700 font-cinzel text-xs">/</span>
+            <BetDisplay label="Him" bet={effectiveBotBet} base={botBet} mod={botBetMod} color="red" compact />
+          </div>
+        </div>
       </div>
     </div>
   );

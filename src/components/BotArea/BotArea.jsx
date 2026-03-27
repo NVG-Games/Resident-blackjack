@@ -46,10 +46,10 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
       <div className="flex items-end gap-1 sm:gap-2" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
         {faceDownCard && (
           <div className="relative">
-            <Card card={faceDownCard} faceDown={!showFaceDown} isNew={false} />
+            <Card card={faceDownCard} faceDown={!showFaceDown} isNew={true} />
             <div className="absolute -bottom-4 left-0 right-0 text-center">
               <span className="text-xs text-stone-500 font-fell italic">
-                {showFaceDown ? faceDownCard.value : '?'}
+                {showFaceDown ? faceDownCard.value : '🔒 ?'}
               </span>
             </div>
           </div>
