@@ -3,6 +3,7 @@ import { gsap } from 'gsap';
 
 import { gameReducer, ACTIONS, ROUND_STATE, createInitialState } from '../../engine/gameState.js';
 import { getBotDecision } from '../../engine/aiBot.js';
+import { useLlmBot } from '../../hooks/useLlmBot.js';
 import { usePeerContext } from '../../contexts/PeerContext.jsx';
 import { generateSeed } from '../../engine/deck.js';
 
@@ -27,6 +28,7 @@ const BOT_FAST_DELAY_MS = 350;
 export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: seedProp, onReturnToMenu }) {
   const isHotSeat = mode === 'hotseat';
   const isOnline = mode === 'online';
+  const isLlm = mode === 'llm';
   // In online mode: host = Clancy (player slot), guest = Hoffman (bot slot).
   const isHost = isOnline && playerRole === 'clancy';
 
@@ -77,6 +79,14 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const tableRef = useRef(null);
   const botProcessingRef = useRef(false);
   const stateRef = useRef(state);
+
+  // LLM bot — always call the hook (hooks can't be conditional), decide is a stable ref
+  const { decide: llmDecide } = useLlmBot();
+  const llmDecideRef = useRef(llmDecide);
+  llmDecideRef.current = llmDecide;
+
+  // Track the last LLM reasoning string for display
+  const [llmReasoning, setLlmReasoning] = useState(null);
 
   const shakeTable = useCallback(() => {
     if (!tableRef.current) return;
@@ -166,7 +176,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     }
   }, [state.roundState, state.botStood, isHotSeat]);
 
-  // AI Bot logic — only runs in AI mode (disabled in hot-seat and online)
+  // AI Bot / LLM Bot logic — disabled in hot-seat and online modes
   useEffect(() => {
     if (isHotSeat || isOnline) return;
     if (state.roundState !== ROUND_STATE.BOT_TURN) {
@@ -189,6 +199,19 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
     setIsThinking(true);
 
+    // ── LLM mode: call MCP server async ──────────────────────────────────────
+    if (isLlm) {
+      llmDecideRef.current(stateRef.current).then((decision) => {
+        setIsThinking(false);
+        botProcessingRef.current = false;
+        if (!decision) return; // aborted request — another is in flight
+        if (decision.reasoning) setLlmReasoning(decision.reasoning);
+        dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
+      });
+      return;
+    }
+
+    // ── Classic AI mode ───────────────────────────────────────────────────────
     const delay = BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
     botTimerRef.current = setTimeout(() => {
       setIsThinking(false);
@@ -198,7 +221,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     }, delay);
 
     return () => clearTimeout(botTimerRef.current);
-  }, [state.roundState, state.botHand.length, state.botTrumpHand.length, state.gameOver, isHotSeat]);
+  }, [state.roundState, state.botHand.length, state.botTrumpHand.length, state.gameOver, isHotSeat, isLlm]);
 
   stateRef.current = state;
 
@@ -322,13 +345,31 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       <div className="relative z-20 flex flex-col h-full px-2 sm:px-6 py-2 sm:py-4 gap-1 sm:gap-2 overflow-hidden">
 
         {/* TOP: Opponent area */}
-        <section className="flex-none flex justify-center items-start">
+        <section className="flex-none flex flex-col items-center gap-1">
           <BotArea
             state={state}
             isThinking={isThinking && !isHotSeat && !isOnline}
             playerName={(isHotSeat || isOnline) ? player2Name : 'Hoffman'}
             hideCards={isHotSeat && !showBotControls && !showRoundResult}
           />
+          {/* LLM reasoning bubble — shown when Claude explains its move */}
+          {isLlm && llmReasoning && !isThinking && (
+            <div
+              className="max-w-xs sm:max-w-sm px-3 py-2 rounded text-xs font-fell italic text-stone-400 text-center"
+              style={{ background: 'rgba(80,20,80,0.25)', border: '1px solid rgba(120,40,120,0.4)' }}
+            >
+              <span className="text-purple-400 not-italic font-cinzel text-xs uppercase tracking-widest">Claude: </span>
+              {llmReasoning}
+            </div>
+          )}
+          {isLlm && isThinking && (
+            <div
+              className="max-w-xs px-3 py-2 rounded text-xs font-fell italic text-purple-400 text-center animate-pulse"
+              style={{ background: 'rgba(80,20,80,0.25)', border: '1px solid rgba(120,40,120,0.4)' }}
+            >
+              Claude is thinking…
+            </div>
+          )}
         </section>
 
         {/* MIDDLE: Bet panel + table trumps (compact row) */}

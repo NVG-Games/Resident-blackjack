@@ -230,6 +230,27 @@ export default function MainMenu({ onStart }) {
           >
             🃏 Real Game Assistant
           </button>
+          <button
+            className={btnBase}
+            style={{
+              ...btnStyle,
+              borderColor: '#3a1a5c',
+              background: 'linear-gradient(135deg, rgba(60,20,100,0.2), rgba(0,0,0,0.8))',
+              boxShadow: '0 0 20px rgba(60,20,100,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+              fontSize: '0.7rem',
+            }}
+            onMouseEnter={(e) => gsap.to(e.currentTarget, {
+              boxShadow: '0 0 40px rgba(100,40,180,0.6), inset 0 0 20px rgba(0,0,0,0.5)',
+              duration: 0.3,
+            })}
+            onMouseLeave={(e) => gsap.to(e.currentTarget, {
+              boxShadow: '0 0 20px rgba(60,20,100,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+              duration: 0.3,
+            })}
+            onClick={() => onStart({ mode: 'llm' })}
+          >
+            ✦ Play vs Claude AI
+          </button>
         </div>
 
       </div>

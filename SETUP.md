@@ -336,6 +336,95 @@ When a host is in the WaitingRoom:
 
 The link format is: `https://t.me/<BOT_USERNAME>?startapp=<ROOM-CODE>`
 
+---
+
+## Option 6 — LLM Bot Mode (Play vs Claude AI)
+
+Play the game against Claude (Anthropic) instead of the built-in rule-based AI bot. The game sends the full board state to a local MCP server, which calls the Anthropic API and returns Claude's decision.
+
+The MCP server runs **locally alongside the dev server** — it is not deployed to GitHub Pages or Telegram (the LLM API key must never be in the browser bundle).
+
+### Step 1 — Get an Anthropic API key
+
+1. Go to [console.anthropic.com](https://console.anthropic.com/)
+2. Create an account and generate an API key
+3. Note: `claude-3-5-haiku-20241022` is the default model — fast and inexpensive (~$0.001 per turn)
+
+### Step 2 — Configure the MCP server
+
+```bash
+cd mcp-server
+cp .env.example .env
+```
+
+Edit `mcp-server/.env`:
+
+```env
+ANTHROPIC_API_KEY=sk-ant-...
+LLM_MODEL=claude-3-5-haiku-20241022
+MCP_PORT=3333
+```
+
+### Step 3 — Install and start the MCP server
+
+```bash
+cd mcp-server
+npm install    # already done if you ran this before
+npm start
+```
+
+You should see:
+
+```
+🎴 RE7 21 MCP Bot Server
+   Model : claude-3-5-haiku-20241022
+   Port  : 3333
+   Key   : ✓ set
+```
+
+### Step 4 — Start the game dev server (separate terminal)
+
+```bash
+# in the project root
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) → **Play vs Claude AI**.
+
+### Step 5 — Optional: also set VITE_MCP_URL in project .env
+
+If you want to run the MCP server on a different port or host, add to your project root `.env`:
+
+```env
+VITE_MCP_URL=http://localhost:3333
+```
+
+The default is `http://localhost:3333` — no change needed for local development.
+
+### Docker Compose with MCP server
+
+To run everything together (game + PeerJS + MCP server):
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-... docker compose up --build
+```
+
+Or add `ANTHROPIC_API_KEY` to your root `.env` and run:
+
+```bash
+docker compose up --build
+```
+
+The game will be at [http://localhost:8080](http://localhost:8080), the MCP server at [http://localhost:3333](http://localhost:3333).
+
+### How it works
+
+1. You click **Play vs Claude AI** in the main menu
+2. Every time it's Hoffman's (the bot's) turn, the game serializes the board state — both hands, remaining deck, trump cards, health, phase — and sends it to `POST http://localhost:3333/decide`
+3. The MCP server builds a detailed prompt (with RE7 21 rules) and calls Anthropic with `tool_use` forcing Claude to return a structured `{ action, trumpType?, reasoning }` response
+4. The browser receives the decision and dispatches it into the game reducer, same as the rule-based AI would
+5. Claude's one-line reasoning is shown as a speech bubble above Hoffman's area
+
 ### Game freezes after standing
 
 - This is a known engine invariant: `BOT_ACTION` hit/trump must preserve `BOT_TURN` state when the player has already stood. If you've modified `gameState.js`, verify this condition is intact.

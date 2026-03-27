@@ -12,6 +12,7 @@ const TG_START_PARAM = window.Telegram?.WebApp?.initDataUnsafe?.start_param ?? n
 
 export default function App() {
   // screen: 'menu' | 'roleselect' | 'lobby' | 'waiting' | 'game' | 'assistant'
+  // mode: 'ai' | 'hotseat' | 'online' | 'llm' (game screen modes)
   // If launched via deep-link invite, go straight to lobby with the room code
   const [screen, setScreen] = useState(TG_START_PARAM ? 'lobby' : 'menu');
   const [gameConfig, setGameConfig] = useState({ mode: 'ai', playerRole: 'clancy' });
@@ -31,6 +32,9 @@ export default function App() {
       setScreen('lobby');
     } else if (mode === 'assistant') {
       setScreen('assistant');
+    } else if (mode === 'llm') {
+      setGameConfig({ mode: 'llm', playerRole: 'clancy' });
+      setScreen('game');
     }
   };
 

@@ -15,6 +15,10 @@ services:
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY:-}
         # Telegram Mini App bot username (for invite deep-links)
         VITE_TG_BOT_USERNAME: ${VITE_TG_BOT_USERNAME:-}
+        # LLM Bot: URL of the MCP server as seen by the browser inside Docker
+        # When using the mcp service below: http://localhost:3333 (host network)
+        # or http://mcp:3333 if the SPA is served from within the Docker network
+        VITE_MCP_URL: ${VITE_MCP_URL:-http://localhost:3333}
     image: resident-blackjack:latest
     container_name: resident-blackjack
     ports:
@@ -49,3 +53,34 @@ services:
       start_period: 5s
     labels:
       com.resident-blackjack.description: "PeerJS WebRTC signalling server"
+
+  # Optional LLM Bot MCP server.
+  # Required for "Play vs Claude AI" mode.
+  # Set ANTHROPIC_API_KEY in your .env file before starting.
+  # Remove this service (and the VITE_MCP_URL build arg above) if you don't need LLM mode.
+  mcp:
+    build:
+      context: ./mcp-server
+      dockerfile_inline: |
+        FROM node:22-alpine
+        WORKDIR /app
+        COPY package.json package-lock.json* ./
+        RUN npm ci --omit=dev
+        COPY . .
+        CMD ["node", "index.js"]
+    container_name: resident-blackjack-mcp
+    ports:
+      - "3333:3333"
+    environment:
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:?ANTHROPIC_API_KEY is required for the mcp service}
+      LLM_MODEL: ${LLM_MODEL:-claude-3-5-haiku-20241022}
+      MCP_PORT: 3333
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3333/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    labels:
+      com.resident-blackjack.description: "LLM bot MCP server (Anthropic API)"
