@@ -63,7 +63,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
         {faceUpCards.map((card, idx) => (
           <Card key={card.id} card={card} faceDown={false} isNew={true} dealIndex={idx} />
         ))}
-        {botHand.length > 0 && (
+        {hand.length > 0 && (
           <div className="ml-1 sm:ml-2 flex flex-col items-center justify-center">
             <div className={`font-cinzel text-xl sm:text-2xl font-bold ${isBust ? 'text-red-600' : 'text-amber-300'}`}>
               {showFaceDown ? total : getHandTotal(faceUpCards)}

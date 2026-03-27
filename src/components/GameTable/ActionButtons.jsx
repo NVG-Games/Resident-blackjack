@@ -12,6 +12,7 @@ export default function ActionButtons({
   showBotControls = false,
   activePlayerName = 'Clancy',
   isBotTurnActive = false,
+  isGuestOnline = false,
 }) {
   const { roundState, playerStood, botStood, botTableTrumps, playerTableTrumps, deck } = state;
 
@@ -21,7 +22,10 @@ export default function ActionButtons({
   const deadSilenced = showBotControls ? deadSilencedForBot : deadSilencedForPlayer;
 
   const deckEmpty = deck.length === 0;
-  const isStood = showBotControls ? botStood : playerStood;
+  // isStood must reflect the LOCAL player's stood status:
+  // - host (Clancy) owns playerStood; guest (Hoffman) owns botStood
+  // - showBotControls path is only reached by guest in their BOT_TURN
+  const isStood = isGuestOnline ? botStood : (showBotControls ? botStood : playerStood);
 
   // canAct: in hot-seat bot-controls it's always active (caller sets disabled=false)
   const canAct = !disabled && !isStood;
@@ -51,8 +55,15 @@ export default function ActionButtons({
 
   // Status message when no action is available
   let statusMsg = null;
-  if (!canAct && !disabled) {
-    if (isHotSeat) {
+  if (!canAct) {
+    if (isGuestOnline) {
+      // Guest (Hoffman): waiting when it's PLAYER_TURN (host's turn)
+      if (roundState !== ROUND_STATE.BOT_TURN) {
+        statusMsg = 'Waiting for Clancy...';
+      } else if (isStood) {
+        statusMsg = 'You stood. Waiting...';
+      }
+    } else if (isHotSeat) {
       if (isBotTurnActive && !showBotControls) {
         statusMsg = `${activePlayerName} is thinking...`;
       } else if (roundState === ROUND_STATE.BOT_TURN && !showBotControls) {

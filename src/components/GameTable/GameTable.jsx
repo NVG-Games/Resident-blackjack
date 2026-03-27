@@ -141,11 +141,13 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   }, [state.roundResult, shakeTable]);
 
   // Hot-seat: when BOT_TURN starts, show handoff screen (unless bot already stood)
-  // Online guest: no handoff needed — they ARE the bot slot already
+  // Online guest (Hoffman): no handoff needed — they ARE the bot slot already
+  // Online host (Clancy): never needs bot controls — AI handles bot slot, guest controls it
   useEffect(() => {
     if (!isHotSeat && !isOnline) return;
     if (isOnline) {
-      // Guest: BOT_TURN is the guest's turn — activate bot controls directly
+      if (isHost) return; // host never gets bot controls — guest manages bot slot
+      // Guest only: BOT_TURN is the guest's turn — activate bot controls directly
       if (state.roundState === ROUND_STATE.BOT_TURN && !state.botStood) {
         setHotSeatBotActive(true);
       }
@@ -410,6 +412,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
             showBotControls={showBotControls}
             activePlayerName={activePlayerLabel}
             isBotTurnActive={isBotTurn && !showHandoff}
+            isGuestOnline={isOnline && !isHost}
           />
         </section>
 
