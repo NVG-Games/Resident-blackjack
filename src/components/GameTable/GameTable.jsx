@@ -84,6 +84,10 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   const tableRef = useRef(null);
   const stateRef = useRef(state);
+  // Prevents the bot AI effect from firing twice when botHand changes mid-turn
+  // (e.g. bot plays a trump that modifies botHand, triggering the effect again before
+  // the current async action completes).
+  const botProcessingRef = useRef(false);
 
   // LLM bot — always call the hook (hooks can't be conditional), decide is a stable ref
   const { decide: llmDecide } = useLlmBot();
@@ -187,7 +191,11 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     if (isHotSeat || isOnline) return;
     if (state.roundState !== ROUND_STATE.BOT_TURN) return;
     if (state.gameOver) return;
+    // Guard against re-entry: if an async bot action is already in flight, skip.
+    // This prevents trump cards that modify botHand from triggering a second action.
+    if (botProcessingRef.current) return;
 
+    botProcessingRef.current = true;
     let cancelled = false;
 
     async function takeBotTurn() {
@@ -216,10 +224,16 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       }
     }
 
-    takeBotTurn();
-    return () => { cancelled = true; setIsThinking(false); };
+    takeBotTurn().finally(() => {
+      botProcessingRef.current = false;
+    });
+    return () => {
+      cancelled = true;
+      setIsThinking(false);
+      botProcessingRef.current = false;
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.roundState, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm]);
+  }, [state.roundState, state.botHand, state.botTrumpsUsedThisTurn, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm]);
 
   stateRef.current = state;
 
@@ -231,6 +245,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const TURN_TIMER_SEC = 60;
   const [turnSecondsLeft, setTurnSecondsLeft] = useState(null);
   const [opponentSecondsLeft, setOpponentSecondsLeft] = useState(null);
+  const [aiWaitSecondsLeft, setAiWaitSecondsLeft] = useState(null);
 
   // Derived turn state — declared here so all useEffects below can reference them
   const isBotTurn = state.roundState === ROUND_STATE.BOT_TURN;
@@ -253,6 +268,18 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.roundState, state.gameOver, isOnline, isHost, isPlayerTurn, isBotTurn]);
+
+  // AI waiting timer — counts up while bot is thinking (not online, not hotseat)
+  useEffect(() => {
+    if (isHotSeat || isOnline || state.gameOver) { setAiWaitSecondsLeft(null); return; }
+    if (!isBotTurn) { setAiWaitSecondsLeft(null); return; }
+    setAiWaitSecondsLeft(TURN_TIMER_SEC);
+    const interval = setInterval(() => {
+      setAiWaitSecondsLeft(prev => (prev === null || prev <= 1) ? null : prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.roundState, state.gameOver, isHotSeat, isOnline]);
 
   useEffect(() => {
     if (isHotSeat) return;
@@ -509,6 +536,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           <TableTrumps
             playerTableTrumps={state.playerTableTrumps}
             botTableTrumps={state.botTableTrumps}
+            isGuestOnline={isOnline && !isHost}
           />
         </section>
 
@@ -568,6 +596,40 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
               </div>
             );
           }
+          // AI wait timer — show while bot is thinking
+          if (aiWaitSecondsLeft !== null) {
+            const pct = aiWaitSecondsLeft / TURN_TIMER_SEC;
+            const r = 22;
+            const circ = 2 * Math.PI * r;
+            const danger = aiWaitSecondsLeft <= 10;
+            const color = danger ? '#ef4444' : '#7a6a50';
+            return (
+              <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <svg width={56} height={56} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+                  <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
+                  <circle
+                    cx={28} cy={28} r={r} fill="none"
+                    stroke={color} strokeWidth={3}
+                    strokeDasharray={circ}
+                    strokeDashoffset={circ * (1 - pct)}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+                  />
+                  <text
+                    x={28} y={28}
+                    textAnchor="middle" dominantBaseline="central"
+                    style={{ transform: 'rotate(90deg)', transformOrigin: '28px 28px', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, fill: color }}
+                  >
+                    {aiWaitSecondsLeft}
+                  </text>
+                </svg>
+                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  Waiting for Hoffman…
+                </span>
+              </div>
+            );
+          }
+
           // No timer — show status text at same fixed height
           const isGuestOnline = isOnline && !isHost;
           const canAct = isGuestOnline ? isBotTurn : !isActionDisabled;

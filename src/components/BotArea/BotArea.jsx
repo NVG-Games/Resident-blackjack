@@ -4,7 +4,7 @@ import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
 export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false, hideHoleCard = false, flipForGuest = false, isActivePlayer = false }) {
-  const { botHand, playerHand, playerTableTrumps, botTableTrumps, botHealth, playerHealth, botStood, playerStood, roundState } = state;
+  const { botHand, playerHand, playerTableTrumps, botTableTrumps, botHealth, playerHealth, botStood, playerStood, roundState, suit = 'spades' } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
   const hand = flipForGuest ? playerHand : botHand;
@@ -40,7 +40,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
       {hideCards ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {hand.map((_, idx) => (
-            <Card key={idx} card={{ value: 0, suit: '?' }} faceDown={true} />
+            <Card key={idx} card={{ value: 0 }} faceDown={true} suit={suit} />
           ))}
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#3a3020', marginLeft: 10, fontStyle: 'italic' }}>
             hidden
@@ -57,6 +57,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
           target={target}
           isBust={isBust}
           stood={stood}
+          suit={suit}
         />
       ) : null}
     </div>
@@ -66,7 +67,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
 const CARD_W = 58;
 const MAX_ROW_W = 260;
 
-function BotFanHand({ cards, faceDownCard, faceUpCards, showFaceDown, scoreColor, total, target, isBust, stood }) {
+function BotFanHand({ cards, faceDownCard, faceUpCards, showFaceDown, scoreColor, total, target, isBust, stood, suit = 'spades' }) {
   const n = cards.length;
   const normalStep = CARD_W + 8;
   const naturalW = CARD_W + (n - 1) * normalStep;
@@ -81,12 +82,12 @@ function BotFanHand({ cards, faceDownCard, faceUpCards, showFaceDown, scoreColor
       <div style={{ position: 'relative', width: rowW, height: 110, flexShrink: 0, marginTop: 16 }}>
         {faceDownCard && (
           <div style={{ position: 'absolute', left: 0, bottom: 0, zIndex: 1 }}>
-            <Card card={faceDownCard} faceDown={!showFaceDown} isNew={true} size="sm" />
+            <Card card={faceDownCard} faceDown={!showFaceDown} isNew={true} size="sm" suit={suit} />
           </div>
         )}
         {faceUpCards.map((card, idx) => (
           <div key={card.id} style={{ position: 'absolute', left: (idx + 1) * step, bottom: 0, zIndex: idx + 2 }}>
-            <Card card={card} faceDown={false} isNew={true} dealIndex={idx} size="sm" />
+            <Card card={card} faceDown={false} isNew={true} dealIndex={idx} size="sm" suit={suit} />
           </div>
         ))}
       </div>

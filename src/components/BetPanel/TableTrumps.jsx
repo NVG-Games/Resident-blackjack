@@ -1,16 +1,21 @@
 import TrumpCard from '../TrumpCard/TrumpCard.jsx';
 
-export default function TableTrumps({ playerTableTrumps, botTableTrumps }) {
+export default function TableTrumps({ playerTableTrumps, botTableTrumps, isGuestOnline = false }) {
   const hasAny = playerTableTrumps.length > 0 || botTableTrumps.length > 0;
   if (!hasAny) return null;
 
+  // For guest online: engine's "bot" slot = guest (you), engine's "player" slot = opponent
+  const myTrumps = isGuestOnline ? botTableTrumps : playerTableTrumps;
+  const theirTrumps = isGuestOnline ? playerTableTrumps : botTableTrumps;
+  const theirLabel = isGuestOnline ? "Opponent's Table" : "Hoffman's Table";
+
   return (
     <div className="flex gap-6 items-start justify-center">
-      {botTableTrumps.length > 0 && (
-        <TrumpSection label="Hoffman's Table" trumps={botTableTrumps} side="bot" />
+      {theirTrumps.length > 0 && (
+        <TrumpSection label={theirLabel} trumps={theirTrumps} side="bot" />
       )}
-      {playerTableTrumps.length > 0 && (
-        <TrumpSection label="Your Table" trumps={playerTableTrumps} side="player" />
+      {myTrumps.length > 0 && (
+        <TrumpSection label="Your Table" trumps={myTrumps} side="player" />
       )}
     </div>
   );

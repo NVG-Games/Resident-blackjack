@@ -17,48 +17,72 @@ if (!document.head.querySelector('#card-anim-style')) {
   document.head.appendChild(DEAL_STYLE);
 }
 
+const SUIT_CONFIG = {
+  spades:   { symbol: '♠', color: '#1a1510',  accent: '#2a2a3a', bg: '#f0eee8' },
+  hearts:   { symbol: '♥', color: '#8b1a1a',  accent: '#6b1212', bg: '#fdf0f0' },
+  diamonds: { symbol: '♦', color: '#7a4a00',  accent: '#5a3500', bg: '#fdf6e8' },
+  clubs:    { symbol: '♣', color: '#1a3a1a',  accent: '#142814', bg: '#eef5ee' },
+};
+
 // SVG face for a number card — noir ivory style
-function CardFace({ value }) {
+function CardFace({ value, suit = 'spades' }) {
+  const cfg = SUIT_CONFIG[suit] || SUIT_CONFIG.spades;
+  const { symbol, color, accent, bg } = cfg;
+  const filterId = `shadow-${value}-${suit}`;
+
   return (
     <svg viewBox="0 0 100 140" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <filter id={`shadow-${value}`}>
-          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodOpacity="0.2" />
+        <filter id={filterId}>
+          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodColor={color} floodOpacity="0.25" />
         </filter>
       </defs>
 
-      {/* Card background — warm ivory */}
-      <rect width="100" height="140" rx="5" ry="5" fill="#f2ece0" />
+      {/* Card background */}
+      <rect width="100" height="140" rx="5" ry="5" fill={bg} />
 
       {/* Outer border */}
       <rect x="2.5" y="2.5" width="95" height="135" rx="4" ry="4"
-        fill="none" stroke="#1a1510" strokeWidth="1.2" />
+        fill="none" stroke={color} strokeWidth="1.2" />
       {/* Inner border */}
       <rect x="5" y="5" width="90" height="130" rx="3" ry="3"
-        fill="none" stroke="#1a1510" strokeWidth="0.4" opacity="0.3" />
+        fill="none" stroke={color} strokeWidth="0.4" opacity="0.25" />
 
-      {/* Corner value - top left */}
-      <text x="12" y="22" fontFamily="Cinzel, serif" fontSize="15" fontWeight="700"
-        fill="#1a1510" textAnchor="middle">{value}</text>
+      {/* Corner value + suit — top left */}
+      <text x="12" y="20" fontFamily="Cinzel, serif" fontSize="13" fontWeight="700"
+        fill={color} textAnchor="middle">{value}</text>
+      <text x="12" y="31" fontFamily="serif" fontSize="10"
+        fill={color} textAnchor="middle">{symbol}</text>
 
-      {/* Corner value - bottom right (rotated) */}
+      {/* Corner value + suit — bottom right (rotated) */}
       <g transform="rotate(180 50 70)">
-        <text x="12" y="22" fontFamily="Cinzel, serif" fontSize="15" fontWeight="700"
-          fill="#1a1510" textAnchor="middle">{value}</text>
+        <text x="12" y="20" fontFamily="Cinzel, serif" fontSize="13" fontWeight="700"
+          fill={color} textAnchor="middle">{value}</text>
+        <text x="12" y="31" fontFamily="serif" fontSize="10"
+          fill={color} textAnchor="middle">{symbol}</text>
       </g>
+
+      {/* Center suit symbol — large decorative */}
+      <text x="50" y="66" fontFamily="serif"
+        fontSize="34" fontWeight="400"
+        fill={accent}
+        textAnchor="middle"
+        dominantBaseline="middle"
+        opacity="0.18"
+      >{symbol}</text>
 
       {/* Center value - large */}
       <text x="50" y="84" fontFamily="Cinzel, serif"
         fontSize="52" fontWeight="900"
-        fill="#1a1510"
+        fill={color}
         textAnchor="middle"
         dominantBaseline="middle"
-        filter={`url(#shadow-${value})`}
+        filter={`url(#${filterId})`}
       >{value}</text>
 
       {/* Thin decorative lines */}
-      <line x1="14" y1="30" x2="86" y2="30" stroke="#1a1510" strokeWidth="0.4" opacity="0.2" />
-      <line x1="14" y1="110" x2="86" y2="110" stroke="#1a1510" strokeWidth="0.4" opacity="0.2" />
+      <line x1="14" y1="38" x2="86" y2="38" stroke={color} strokeWidth="0.4" opacity="0.15" />
+      <line x1="14" y1="110" x2="86" y2="110" stroke={color} strokeWidth="0.4" opacity="0.15" />
     </svg>
   );
 }
@@ -112,6 +136,7 @@ export default function Card({
   onClick,
   highlight = false,
   size = 'md',
+  suit = 'spades',
 }) {
   const cardRef = useRef(null);
   const innerRef = useRef(null);
@@ -178,7 +203,7 @@ export default function Card({
           boxShadow: '0 4px 20px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.5)',
         }}
       >
-        {faceDown ? <CardBack /> : <CardFace value={card?.value} />}
+        {faceDown ? <CardBack /> : <CardFace value={card?.value} suit={suit} />}
       </div>
     </div>
   );

@@ -50,6 +50,7 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
   // Cards to display — always show all revealed
   const myHand = isGuestOnline ? state.botHand : state.playerHand;
   const theirHand = isGuestOnline ? state.playerHand : state.botHand;
+  const suit = state.suit || 'spades';
 
   return (
     <div
@@ -71,14 +72,14 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
           {/* My hand */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#7a6a50', textTransform: 'uppercase', letterSpacing: '0.1em' }}>You</div>
-            <HandReveal cards={myHand} total={myTotal} target={target} color={myTotal > target ? '#ef4444' : '#ffd152'} />
+            <HandReveal cards={myHand} total={myTotal} target={target} color={myTotal > target ? '#ef4444' : '#ffd152'} suit={suit} />
           </div>
           {/* Divider */}
           <div style={{ width: 1, background: 'rgba(255,209,82,0.08)', alignSelf: 'stretch', flexShrink: 0 }} />
           {/* Their hand */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#7a6a50', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Opponent</div>
-            <HandReveal cards={theirHand} total={theirTotal} target={target} color={theirTotal > target ? '#ef4444' : '#e8d5b0'} />
+            <HandReveal cards={theirHand} total={theirTotal} target={target} color={theirTotal > target ? '#ef4444' : '#e8d5b0'} suit={suit} />
           </div>
         </div>
 
@@ -137,7 +138,7 @@ const SMALL_SCALE = 0.62;
 const SMALL_W = Math.round(80 * SMALL_SCALE); // ~50px
 const SMALL_H = Math.round(112 * SMALL_SCALE); // ~69px
 
-function HandReveal({ cards, total, target, color }) {
+function HandReveal({ cards, total, target, color, suit = 'spades' }) {
   if (!cards || cards.length === 0) return null;
   const MAX_W = 140;
   const n = cards.length;
@@ -156,7 +157,7 @@ function HandReveal({ cards, total, target, color }) {
           }}>
             {/* Scale down the card by wrapping in a clipped container */}
             <div style={{ transform: `scale(${SMALL_SCALE})`, transformOrigin: 'top left', width: `${100 / SMALL_SCALE}%`, height: `${100 / SMALL_SCALE}%` }}>
-              <Card card={card} faceDown={false} />
+              <Card card={card} faceDown={false} suit={suit} />
             </div>
           </div>
         ))}

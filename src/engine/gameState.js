@@ -27,9 +27,12 @@ export const ROUND_STATE = {
   ROUND_OVER: 'ROUND_OVER',
 };
 
+const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
+
 export function createInitialState() {
   return {
     phase: PHASES.FINGER,
+    suit: SUITS[Math.floor(Math.random() * SUITS.length)],
     roundNumber: 0,
     roundState: ROUND_STATE.DEALING,
     deck: [],
@@ -106,7 +109,10 @@ export function gameReducer(state, action) {
       }
 
       const phaseConfig = PHASE_CONFIG[state.phase];
-      const baseBet = phaseConfig.baseBet + Math.floor(state.roundNumber / 2);
+      const sawExtended = state.phase === PHASES.SAW && state.roundNumber >= phaseConfig.rounds;
+      const baseBet = sawExtended
+        ? phaseConfig.baseBet + Math.floor(phaseConfig.rounds / 2) + (state.roundNumber - phaseConfig.rounds + 1)
+        : phaseConfig.baseBet + Math.floor(state.roundNumber / 2);
 
       return {
         ...state,
@@ -215,9 +221,10 @@ export function gameReducer(state, action) {
 
     case ACTIONS.BOT_ACTION: {
       const { type: botAction, trump } = action.payload;
-      // Always pass turn to PLAYER_TURN after bot action — hot-seat needs turn transfer every action.
-      // In AI mode the bot useEffect will re-fire on BOT_TURN if it wants another card.
-      const nextTurn = ROUND_STATE.PLAYER_TURN;
+      // If player already stood, bot keeps BOT_TURN after hit/trump so it can chain actions.
+      // Only revert to PLAYER_TURN once bot stands (auto-resolve then fires).
+      // In hot-seat mode playerStood is reset on bot hit (see below), so nextTurn ends up PLAYER_TURN anyway.
+      const nextTurn = state.playerStood ? ROUND_STATE.BOT_TURN : ROUND_STATE.PLAYER_TURN;
 
       if (botAction === 'stand') {
         return {
@@ -247,12 +254,14 @@ export function gameReducer(state, action) {
         const log = [...state.log, { msg: `Hoffman draws. His total approaches...`, time: Date.now() }];
 
         // No auto-stand on bust — bot (human in hot-seat) must press STAND themselves.
+        // Only reset playerStood if player hasn't stood yet (hot-seat: P2 hit means P1 decides again).
+        // When player already stood (AI mode), keep playerStood=true so auto-resolve can fire.
         return {
           ...state,
           botHand: newHand,
           deck: remaining,
           roundState: nextTurn,
-          playerStood: false, // P2 hit resets P1's stand — P1 must decide again
+          playerStood: state.playerStood ? true : false,
           log,
         };
       }
@@ -378,6 +387,28 @@ export function gameReducer(state, action) {
             phase: nextPhase,
             message: nextPhase === PHASES.SHOCK ? 'SHOCK PHASE' : 'SAW PHASE',
             subMessage: PHASE_CONFIG[nextPhase].description,
+          },
+        };
+      }
+
+      // SAW phase extended — keep going, saw closes in
+      if (phaseOver && state.phase === PHASES.SAW) {
+        const extraRound = state.roundNumber - phaseRounds + 1;
+        const sawMessages = [
+          { message: 'THE SAW CREEPS CLOSER', subMessage: 'The blades spin faster. Lucas laughs.' },
+          { message: 'NO ESCAPE', subMessage: 'Flesh meets metal. One more round.' },
+          { message: 'STILL BREATHING?', subMessage: 'The machine grows impatient.' },
+          { message: 'LAST CHANCE', subMessage: 'One of you dies tonight.' },
+        ];
+        const msgIdx = Math.min(extraRound - 1, sawMessages.length - 1);
+        return {
+          ...state,
+          playerStood: false,
+          botStood: false,
+          overlay: {
+            type: 'phase',
+            phase: PHASES.SAW,
+            ...sawMessages[msgIdx],
           },
         };
       }

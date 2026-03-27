@@ -4,7 +4,7 @@ import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
 export default function PlayerArea({ state, playerName = 'Clancy', hideCards = false, flipForGuest = false, isOpponent = false }) {
-  const { playerHand, botHand, playerTableTrumps, botTableTrumps, playerHealth, botHealth, playerStood, botStood } = state;
+  const { playerHand, botHand, playerTableTrumps, botTableTrumps, playerHealth, botHealth, playerStood, botStood, suit = 'spades' } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
   const hand = flipForGuest ? botHand : playerHand;
@@ -24,7 +24,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
       {hideCards ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {hand.map((_, idx) => (
-            <Card key={idx} card={{ value: 0, suit: '?' }} faceDown={true} />
+            <Card key={idx} card={{ value: 0 }} faceDown={true} suit={suit} />
           ))}
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#9c8e76', marginLeft: 10, fontStyle: 'italic' }}>
             hidden
@@ -40,6 +40,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
           stood={stood}
           isClose={isClose}
           showHoleValue={(card) => card.value}
+          suit={suit}
         />
       )}
 
@@ -63,7 +64,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
 const CARD_W = 58;
 const MAX_ROW_W = 260;
 
-function FanHand({ cards, scoreColor, total, target, isBust, stood, isClose, showHoleValue }) {
+function FanHand({ cards, scoreColor, total, target, isBust, stood, isClose, showHoleValue, suit = 'spades' }) {
   const n = cards.length;
   if (n === 0) return null;
 
@@ -78,11 +79,11 @@ function FanHand({ cards, scoreColor, total, target, isBust, stood, isClose, sho
         {/* Cards fan */}
         <div style={{ position: 'relative', width: rowW, height: 110, flexShrink: 0 }}>
           <div style={{ position: 'absolute', left: 0, bottom: 0, zIndex: 1 }}>
-            <Card card={cards[0]} faceDown={false} isNew={true} size="sm" />
+            <Card card={cards[0]} faceDown={false} isNew={true} size="sm" suit={suit} />
           </div>
           {cards.slice(1).map((card, idx) => (
             <div key={card.id} style={{ position: 'absolute', left: (idx + 1) * step, bottom: 0, zIndex: idx + 2 }}>
-              <Card card={card} faceDown={false} isNew={true} dealIndex={idx} highlight={isClose && idx === cards.length - 2} size="sm" />
+              <Card card={card} faceDown={false} isNew={true} dealIndex={idx} highlight={isClose && idx === cards.length - 2} size="sm" suit={suit} />
             </div>
           ))}
         </div>
