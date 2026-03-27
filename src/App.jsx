@@ -110,6 +110,12 @@ export default function App() {
     setScreen('menu');
   };
 
+  // ── Ghost session: player joined a presence-padded room ──────────────────
+  const handleGhostGame = useCallback(() => {
+    setGameConfig({ mode: 'ai', playerRole: 'clancy', slowBot: true });
+    setScreen('game');
+  }, []);
+
   // ── Navigation helpers ────────────────────────────────────────────────────
   const handleBackToMenu = () => {
     setOnlineState(null);
@@ -195,6 +201,7 @@ export default function App() {
           onBack={handleBackToMenu}
           onHostReady={handleHostReady}
           onJoinReady={handleJoinReady}
+          onGhostGame={handleGhostGame}
           initialJoinCode={TG_START_PARAM}
         />
       )}
@@ -212,6 +219,7 @@ export default function App() {
           mode={gameConfig.mode}
           playerRole={gameConfig.playerRole}
           seed={gameConfig.seed}
+          slowBot={gameConfig.slowBot ?? false}
           onReturnToMenu={handleReturnToMenu}
         />
       )}

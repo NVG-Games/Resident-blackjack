@@ -22,9 +22,9 @@ const btnBase =
  *   onJoinReady({ code, seed, isHost }) — guest waiting room ready
  *   initialJoinCode?                    — pre-fill join code (from deep-link)
  */
-export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJoinCode }) {
+export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostGame, initialJoinCode }) {
   const containerRef = useRef(null);
-  const { rooms, loading, error, announce, remove, refresh } = useLobby();
+  const { rooms, displayRooms, loading, error, announce, remove, refresh } = useLobby();
   const { peerId, peerStatus, connStatus, initPeer, connectToPeer, send, onData, onOpen } = usePeerContext();
   const { tgUser, isTelegram } = useTelegram();
 
@@ -116,6 +116,16 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
   };
 
   const handleJoinRoom = (room) => {
+    // Shadow session — redirect to single-player vs AI with humanised delay
+    if (room._shadow) {
+      setJoinStatus('connecting');
+      const delay = 1200 + Math.random() * 1800;
+      setTimeout(() => {
+        setJoinStatus(null);
+        onGhostGame?.();
+      }, delay);
+      return;
+    }
     setJoinStatus('connecting');
     initPeer();
     const hostPeerId = room.host_peer_id ?? room.hostId;
@@ -308,12 +318,12 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
                   Scanning…
                 </div>
               )}
-              {!loading && rooms.filter(r => r.code !== hostCode).length === 0 && (
+              {!loading && displayRooms.filter(r => r.code !== hostCode).length === 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 18, fontStyle: 'italic' }}>
                   No open rooms
                 </div>
               )}
-              {!loading && rooms.filter(r => r.code !== hostCode).map((room) => (
+              {!loading && displayRooms.filter(r => r.code !== hostCode).map((room) => (
                 <RoomRow
                   key={room.code}
                   room={room}

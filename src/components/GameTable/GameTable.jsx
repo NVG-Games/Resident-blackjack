@@ -20,13 +20,15 @@ import HandoffScreen from './HandoffScreen.jsx';
 
 const BOT_THINK_DELAY_MS = 800;
 const BOT_FAST_DELAY_MS = 350;
+const BOT_SLOW_MIN_MS = 2000;
+const BOT_SLOW_RANGE_MS = 5000;
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
 // playerRole: 'clancy' = you are Clancy (player), Hoffman is bot
 //             'hoffman' = you are Hoffman (bot slot), Clancy is opponent
 // In hot-seat/online both are human — role only changes labels.
 // seed: optional number for P2P online mode to synchronise deck shuffle.
-export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: seedProp, onReturnToMenu }) {
+export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: seedProp, slowBot = false, onReturnToMenu }) {
   const isHotSeat = mode === 'hotseat';
   const isOnline = mode === 'online';
   const isLlm = mode === 'llm';
@@ -216,7 +218,9 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         if (decision.reasoning) setLlmReasoning(decision.reasoning);
         dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
       } else {
-        const delay = BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
+        const delay = slowBot
+          ? BOT_SLOW_MIN_MS + Math.random() * BOT_SLOW_RANGE_MS
+          : BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
         await wait(delay);
         if (cancelled) return;
         setIsThinking(false);
@@ -233,7 +237,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       botProcessingRef.current = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.roundState, state.botHand, state.botTrumpsUsedThisTurn, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm]);
+  }, [state.roundState, state.botHand, state.botTrumpsUsedThisTurn, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm, slowBot]);
 
   stateRef.current = state;
 

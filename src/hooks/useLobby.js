@@ -11,8 +11,9 @@
  *
  * Table schema: see supabase/migrations/001_rooms.sql
  */
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase.js';
+import { getPresencePool } from '../engine/presence.js';
 
 const SUPABASE_CONFIGURED =
   Boolean(import.meta.env.VITE_SUPABASE_URL) &&
@@ -20,7 +21,13 @@ const SUPABASE_CONFIGURED =
 
 const WORDS = ['WOLF', 'BILE', 'GORE', 'BONE', 'VILE', 'DUSK', 'RUST', 'GRIM', 'CLAW', 'RUIN'];
 
-export function generateRoomCode() {
+export function generateRoomCode(seed) {
+  if (seed !== undefined) {
+    // Deterministic path — used for pre-seeded entries
+    const si = ((seed ^ 0xf1e2d3c4) >>> 0) % WORDS.length;
+    const sn = String((((seed * 0x6c62272e) >>> 0) % 90) + 10);
+    return `${WORDS[si]}-${sn}`;
+  }
   const w = WORDS[Math.floor(Math.random() * WORDS.length)];
   const n = String(Math.floor(Math.random() * 90) + 10);
   return `${w}-${n}`;
@@ -151,5 +158,19 @@ export function useLobby() {
 
   const refresh = fetchRooms;
 
-  return { rooms, loading, error, announce, remove, refresh };
+  // Presence pool is stable for the session (day-seeded), computed once.
+  // Real rooms always appear first; presence entries pad the rest.
+  const _presenceRef = useRef(null);
+  const displayRooms = useMemo(() => {
+    if (_presenceRef.current === null) {
+      _presenceRef.current = getPresencePool(0, 75);
+    }
+    const pool = _presenceRef.current;
+    // Exclude pool entries whose code collides with a real room
+    const realCodes = new Set(rooms.map((r) => r.code));
+    const filtered = pool.filter((p) => !realCodes.has(p.code));
+    return [...rooms, ...filtered];
+  }, [rooms]);
+
+  return { rooms, displayRooms, loading, error, announce, remove, refresh };
 }
