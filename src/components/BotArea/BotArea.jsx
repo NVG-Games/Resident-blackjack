@@ -36,18 +36,6 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
         <HealthBar health={health} maxHealth={10} />
       </div>
 
-      {/* Thinking */}
-      {isThinking && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#8a7d68', fontFamily: 'Cinzel, serif', fontSize: 15, letterSpacing: '0.08em' }}>
-          <span style={{ fontSize: 18 }}>considers</span>
-          <div style={{ display: 'flex', gap: 3 }}>
-            {[0, 1, 2].map(i => (
-              <div key={i} className="animate-bounce" style={{ width: 4, height: 4, borderRadius: '50%', background: '#8a7d68', animationDelay: `${i * 0.15}s` }} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Cards row — fully hidden in hot-seat when it's not this player's turn */}
       {hideCards ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

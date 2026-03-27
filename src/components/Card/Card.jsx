@@ -111,6 +111,7 @@ export default function Card({
   className = '',
   onClick,
   highlight = false,
+  size = 'md',
 }) {
   const cardRef = useRef(null);
   const innerRef = useRef(null);
@@ -151,14 +152,17 @@ export default function Card({
     };
   }, [highlight]);
 
+  const cardW = size === 'sm' ? 'clamp(56px, 15vw, 72px)' : 'clamp(80px, 22vw, 110px)';
+  const cardH = size === 'sm' ? 'clamp(78px, 21vw, 101px)' : 'clamp(112px, 31vw, 154px)';
+
   return (
     <div
       ref={cardRef}
       onClick={onClick}
       className={`relative cursor-pointer select-none ${isNew ? 'card-deal-in' : ''} ${className}`}
       style={{
-        width: 'clamp(80px, 22vw, 110px)',
-        height: 'clamp(112px, 31vw, 154px)',
+        width: cardW,
+        height: cardH,
         perspective: '600px',
         transformStyle: 'preserve-3d',
       }}

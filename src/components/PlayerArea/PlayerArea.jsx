@@ -18,7 +18,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
   const scoreColor = isBust ? '#e57373' : isClose ? '#ffd152' : '#e8d5b0';
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
 
       {/* Cards */}
       {hideCards ? (
@@ -44,13 +44,13 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
       )}
 
       {/* Identity row — below cards */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <HealthBar health={health} maxHealth={10} />
         <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 30, color: isOpponent ? '#e8d5b0' : '#ffd152', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: isOpponent ? '#e8d5b0' : '#ffd152', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {playerName}
           </div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#5a5040', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
             {isOpponent ? 'Opponent' : 'You'}
           </div>
         </div>
@@ -59,10 +59,9 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
   );
 }
 
-// CARD_W matches Card component's width (~70px at normal size)
-const CARD_W = 70;
-const MAX_ROW_W = 300; // max px before we start overlapping
-const SCORE_W = 80;    // reserved for score column
+// CARD_W matches Card component's small size (~56px clamp min)
+const CARD_W = 58;
+const MAX_ROW_W = 260;
 
 function FanHand({ cards, scoreColor, total, target, isBust, stood, isClose, showHoleValue }) {
   const n = cards.length;
@@ -77,27 +76,27 @@ function FanHand({ cards, scoreColor, total, target, isBust, stood, isClose, sho
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
         {/* Cards fan */}
-        <div style={{ position: 'relative', width: rowW, height: 145, flexShrink: 0 }}>
+        <div style={{ position: 'relative', width: rowW, height: 110, flexShrink: 0 }}>
           <div style={{ position: 'absolute', left: 0, bottom: 0, zIndex: 1 }}>
-            <Card card={cards[0]} faceDown={false} isNew={true} />
+            <Card card={cards[0]} faceDown={false} isNew={true} size="sm" />
           </div>
           {cards.slice(1).map((card, idx) => (
             <div key={card.id} style={{ position: 'absolute', left: (idx + 1) * step, bottom: 0, zIndex: idx + 2 }}>
-              <Card card={card} faceDown={false} isNew={true} dealIndex={idx} highlight={isClose && idx === cards.length - 2} />
+              <Card card={card} faceDown={false} isNew={true} dealIndex={idx} highlight={isClose && idx === cards.length - 2} size="sm" />
             </div>
           ))}
         </div>
 
         {/* Score — left-aligned with cards */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
-          <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 52, lineHeight: 1, color: scoreColor }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 4 }}>
+          <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 38, lineHeight: 1, color: scoreColor }}>
             {total}
           </span>
-          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040' }}>
+          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a5040' }}>
             {isBust ? 'BUST' : `of ${target}`}
           </span>
           {stood && !isBust && (
-            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a5040', letterSpacing: '0.1em' }}>· stood</span>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#5a5040', letterSpacing: '0.1em' }}>· stood</span>
           )}
         </div>
       </div>
@@ -109,17 +108,17 @@ function HealthBar({ health, maxHealth }) {
   const pips = Array.from({ length: maxHealth }, (_, i) => i < health);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 28, color: '#e8d5b0' }}>
-        {health}<span style={{ fontSize: 18, color: '#5a5040' }}>/{maxHealth}</span>
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+      <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0' }}>
+        {health}<span style={{ fontSize: 13, color: '#5a5040' }}>/{maxHealth}</span>
       </div>
-      <div style={{ display: 'flex', gap: 3 }}>
+      <div style={{ display: 'flex', gap: 2 }}>
         {pips.map((alive, i) => (
           <div key={i} style={{
-            width: 11, height: 20, borderRadius: 1, transition: 'all 0.35s',
+            width: 9, height: 15, borderRadius: 1, transition: 'all 0.35s',
             background: alive ? '#ffd152' : 'transparent',
             border: alive ? 'none' : '1px solid #2a2218',
-            boxShadow: alive ? '0 0 5px rgba(255,209,82,0.25)' : 'none',
+            boxShadow: alive ? '0 0 4px rgba(255,209,82,0.25)' : 'none',
           }} />
         ))}
       </div>

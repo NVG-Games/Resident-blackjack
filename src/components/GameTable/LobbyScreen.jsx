@@ -210,22 +210,24 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* Fast Play — primary CTA */}
-            {!isHosting && (
-              <button
-                className={btnBase}
-                style={{
-                  width: '100%', fontSize: 20, padding: '18px 24px', letterSpacing: '0.05em',
-                  color: '#ffd152', background: 'rgba(255,209,82,0.06)',
-                  border: '1px solid rgba(255,209,82,0.45)', borderRadius: 6,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.7)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.45)'; }}
-                onClick={handleFastPlay}
-                disabled={joinStatus === 'connecting'}
-              >
-                ⚡ Fast Play
-              </button>
-            )}
+            <button
+              className={btnBase}
+              style={{
+                width: '100%', fontSize: 20, padding: '18px 24px', letterSpacing: '0.05em',
+                color: isHosting || joinStatus === 'connecting' ? '#5a4a28' : '#ffd152',
+                background: 'rgba(255,209,82,0.06)',
+                border: `1px solid ${isHosting || joinStatus === 'connecting' ? 'rgba(255,209,82,0.1)' : 'rgba(255,209,82,0.45)'}`,
+                borderRadius: 6,
+                opacity: isHosting || joinStatus === 'connecting' ? 0.4 : 1,
+                cursor: isHosting || joinStatus === 'connecting' ? 'not-allowed' : 'pointer',
+              }}
+              onMouseEnter={(e) => { if (!isHosting && joinStatus !== 'connecting') { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.7)'; } }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; e.currentTarget.style.borderColor = isHosting || joinStatus === 'connecting' ? 'rgba(255,209,82,0.1)' : 'rgba(255,209,82,0.45)'; }}
+              onClick={handleFastPlay}
+              disabled={isHosting || joinStatus === 'connecting'}
+            >
+              ⚡ Fast Play
+            </button>
 
             {/* Host a Game — small, subtle */}
             <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Create a room</div>
@@ -305,12 +307,12 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
                   Scanning…
                 </div>
               )}
-              {!loading && rooms.length === 0 && (
+              {!loading && rooms.filter(r => r.code !== hostCode).length === 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 18, fontStyle: 'italic' }}>
                   No open rooms
                 </div>
               )}
-              {!loading && rooms.map((room) => (
+              {!loading && rooms.filter(r => r.code !== hostCode).map((room) => (
                 <RoomRow
                   key={room.code}
                   room={room}

@@ -58,10 +58,15 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     if (!isOnline) return;
     const unsub = onData((action) => {
       if (!action?.type) return;
+      if (action.type === 'HOST_TIMEOUT') {
+        // Host abandoned the round — guest returns to menu
+        onReturnToMenu?.();
+        return;
+      }
       dispatch(action);
     });
     return unsub;
-  }, [isOnline, onData]);
+  }, [isOnline, onData, onReturnToMenu]);
 
   // Synced dispatch: local action dispatched AND mirrored to remote peer
   const syncedDispatch = useCallback((action) => {
@@ -292,6 +297,15 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     if (isOnline) syncedDispatch(a); else dispatch(a);
   }, [isOnline, syncedDispatch]);
 
+  // Online host timeout: if host doesn't click Next Round in time, return to menu
+  const handleHostRoundTimeout = useCallback(() => {
+    if (isOnline && isHost) {
+      // Notify guest so they also go to menu
+      peerSend({ type: 'HOST_TIMEOUT' });
+      onReturnToMenu?.();
+    }
+  }, [isOnline, isHost, peerSend, onReturnToMenu]);
+
   const handleHandoffReady = useCallback((who) => {
     if (isHotSeat) setConfirmedPlayer(who);
     else setHotSeatBotActive(true);
@@ -371,24 +385,25 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         onClick={() => setShowExitConfirm(true)}
         style={{
           position: 'absolute',
-          top: 'calc(8px + env(safe-area-inset-top))',
-          left: 12,
+          top: 'calc(6px + env(safe-area-inset-top))',
+          left: 8,
           zIndex: 40,
-          background: 'none',
-          border: 'none',
+          background: 'rgba(0,0,0,0.4)',
+          border: '1px solid rgba(255,209,82,0.15)',
+          borderRadius: 6,
           cursor: 'pointer',
-          padding: '6px 8px',
+          padding: '10px 16px',
           fontFamily: 'Cinzel, serif',
-          fontSize: 13,
-          color: 'rgba(122,106,80,0.6)',
+          fontSize: 16,
+          color: 'rgba(122,106,80,0.8)',
           letterSpacing: '0.05em',
           lineHeight: 1,
           display: 'flex',
           alignItems: 'center',
-          gap: 5,
+          gap: 6,
         }}
-        onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(232,213,176,0.9)'; }}
-        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(122,106,80,0.6)'; }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(232,213,176,0.95)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.35)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(122,106,80,0.8)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.15)'; }}
       >
         ← Menu
       </button>
@@ -458,15 +473,15 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       )}
 
       {/* Main game layout — single column, fills viewport */}
-      <div className="relative z-20 flex flex-col h-full px-3 sm:px-6 gap-2 sm:gap-3" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
+      <div className="relative z-20 flex flex-col h-full" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))' }}>
 
         {/* TOP: Bet panel */}
-        <section className="flex-none w-full">
+        <section className="flex-none w-full px-3 sm:px-6">
           <BetPanel state={state} isGuestOnline={isOnline && !isHost} />
         </section>
 
         {/* Opponent area */}
-        <section className="flex-none flex flex-col items-center gap-2" style={{ paddingTop: 16 }}>
+        <section className="flex-none flex flex-col items-center gap-2 px-3 sm:px-6" style={{ paddingTop: 16 }}>
           <BotArea
             state={state}
             isThinking={isThinking && !isHotSeat && !isOnline}
@@ -496,8 +511,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </section>
 
         {/* CENTER: Deck (left, absolute) + Table Trumps (true center) */}
-        <section className="flex-1 relative flex items-center justify-center w-full min-h-0" style={{ zIndex: 5 }}>
-          <div className="absolute left-0 top-1/2 -translate-y-1/2">
+        <section className="flex-1 relative flex items-center justify-center w-full min-h-0 px-3 sm:px-6" style={{ zIndex: 5 }}>
+          <div className="absolute top-1/2 -translate-y-1/2" style={{ left: 'max(12px, env(safe-area-inset-left))' }}>
             <DeckPile count={state.deck.length} />
           </div>
           <TableTrumps
@@ -507,7 +522,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </section>
 
         {/* BOTTOM: Player area + Trump hand */}
-        <section className="flex-none flex flex-col items-center mt-auto" style={{ paddingBottom: 'calc(120px + env(safe-area-inset-bottom))', paddingTop: 12, gap: 20 }}>
+        <section className="flex-none flex flex-col items-center px-3 sm:px-6" style={{ paddingTop: 8, gap: 8 }}>
           <PlayerArea
             state={state}
             playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
@@ -526,58 +541,58 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           </div>
         </section>
 
-      </div>
-
-      {/* ROUND RESULT */}
-      {showRoundResult && (
-        <RoundResult result={roundResult} onNext={handleNextRound} state={state} isGuestOnline={isOnline && !isHost} />
-      )}
-
-      {/* PHASE / VICTORY / DEFEAT OVERLAY */}
-      {overlay && (
-        <PhaseOverlay overlay={overlay} onDismiss={handleDismissOverlay} />
-      )}
-
-      {/* HOT-SEAT: handoff screen — shows for whoever's turn is next */}
-      {showHandoff && (
-        <HandoffScreen
-          toPlayerName={handoffTarget}
-          onReady={() => handleHandoffReady(activeIsP1 ? 'p1' : 'p2')}
-        />
-      )}
-
-      {/* ACTION BUTTONS — fixed to bottom, respects iOS home indicator */}
-      <div className="absolute z-30" style={{ bottom: 0, left: 0, right: 0, background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '10px 12px calc(12px + env(safe-area-inset-bottom))' }}>
-        {/* Turn timer — radial */}
-        {turnSecondsLeft !== null && (() => {
-          const pct = turnSecondsLeft / TURN_TIMER_SEC;
-          const r = 22;
-          const circ = 2 * Math.PI * r;
-          const danger = turnSecondsLeft <= 10;
-          const color = danger ? '#ef4444' : '#ffd152';
+        {/* ACTION BUTTONS — in flow, at the bottom of flex column */}
+        <div className="flex-none z-30 mt-auto" style={{ background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '0 12px calc(12px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* Top info row — fixed height 64px, always occupies space */}
+        {(() => {
+          if (turnSecondsLeft !== null) {
+            const pct = turnSecondsLeft / TURN_TIMER_SEC;
+            const r = 22;
+            const circ = 2 * Math.PI * r;
+            const danger = turnSecondsLeft <= 10;
+            const color = danger ? '#ef4444' : '#ffd152';
+            return (
+              <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+                <svg width={56} height={56} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+                  <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
+                  <circle
+                    cx={28} cy={28} r={r} fill="none"
+                    stroke={color} strokeWidth={3}
+                    strokeDasharray={circ}
+                    strokeDashoffset={circ * (1 - pct)}
+                    strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+                  />
+                  <text
+                    x={28} y={28}
+                    textAnchor="middle" dominantBaseline="central"
+                    style={{ transform: 'rotate(90deg)', transformOrigin: '28px 28px', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, fill: color }}
+                  >
+                    {turnSecondsLeft}
+                  </text>
+                </svg>
+                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: danger ? '#ef4444' : '#7a6a50', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  {danger ? '⚠ Auto-stand soon' : 'Your turn'}
+                </span>
+              </div>
+            );
+          }
+          // No timer — show status text at same fixed height
+          const isGuestOnline = isOnline && !isHost;
+          const canAct = isGuestOnline ? isBotTurn : !isActionDisabled;
+          let msg = null;
+          if (!canAct) {
+            if (isGuestOnline) {
+              msg = !isBotTurn ? 'Waiting for opponent…' : state.botStood ? 'You stood. Waiting…' : null;
+            } else if (isHotSeat) {
+              msg = null; // hot-seat has handoff screen
+            } else {
+              msg = isBotTurn ? 'Waiting for Hoffman…' : state.playerStood ? 'You stood. Hoffman plays…' : null;
+            }
+          }
           return (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-              <svg width={56} height={56} style={{ transform: 'rotate(-90deg)' }}>
-                <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
-                <circle
-                  cx={28} cy={28} r={r} fill="none"
-                  stroke={color} strokeWidth={3}
-                  strokeDasharray={circ}
-                  strokeDashoffset={circ * (1 - pct)}
-                  strokeLinecap="round"
-                  style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
-                />
-                <text
-                  x={28} y={28}
-                  textAnchor="middle" dominantBaseline="central"
-                  style={{ transform: 'rotate(90deg)', transformOrigin: '28px 28px', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, fill: color }}
-                >
-                  {turnSecondsLeft}
-                </text>
-              </svg>
-              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: danger ? '#ef4444' : '#7a6a50', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                {danger ? '⚠ Auto-stand soon' : 'Your turn'}
-              </span>
+            <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {msg && <span style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.06em' }}>{msg}</span>}
             </div>
           );
         })()}
@@ -592,7 +607,35 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           isBotTurnActive={isBotTurn && !showHandoff}
           isGuestOnline={isOnline && !isHost}
         />
+        </div>
+
       </div>
+
+      {/* ROUND RESULT */}
+      {showRoundResult && (
+        <RoundResult
+          result={roundResult}
+          onNext={handleNextRound}
+          state={state}
+          isGuestOnline={isOnline && !isHost}
+          isOnline={isOnline}
+          isHost={isHost}
+          onHostTimeout={handleHostRoundTimeout}
+        />
+      )}
+
+      {/* PHASE / VICTORY / DEFEAT OVERLAY */}
+      {overlay && (
+        <PhaseOverlay overlay={overlay} onDismiss={handleDismissOverlay} />
+      )}
+
+      {/* HOT-SEAT: handoff screen */}
+      {showHandoff && (
+        <HandoffScreen
+          toPlayerName={handoffTarget}
+          onReady={() => handleHandoffReady(activeIsP1 ? 'p1' : 'p2')}
+        />
+      )}
 
       {/* Vignette */}
       <div className="absolute inset-0 pointer-events-none z-5"

@@ -48,46 +48,12 @@ export default function ActionButtons({
     disabled:cursor-not-allowed
   `;
 
-  // Status message when no action is available
-  let statusMsg = null;
-  if (!canAct) {
-    if (isGuestOnline) {
-      // Guest (Hoffman): waiting when it's PLAYER_TURN (host's turn)
-      if (roundState !== ROUND_STATE.BOT_TURN) {
-        statusMsg = 'Waiting for Clancy...';
-      } else if (isStood) {
-        statusMsg = 'You stood. Waiting...';
-      }
-    } else if (isHotSeat) {
-      if (isBotTurnActive && !showBotControls) {
-        statusMsg = `${activePlayerName} is thinking...`;
-      } else if (roundState === ROUND_STATE.BOT_TURN && !showBotControls) {
-        statusMsg = 'Waiting for handoff...';
-      } else if (isStood) {
-        statusMsg = `${activePlayerName} has stood.`;
-      }
-    } else {
-      if (roundState === ROUND_STATE.BOT_TURN) {
-        statusMsg = 'Waiting for Hoffman...';
-      } else if (playerStood) {
-        statusMsg = 'You stood. Hoffman plays...';
-      }
-    }
-  }
-
   return (
     <div style={{ width: '100%', boxSizing: 'border-box' }}>
-      {/* Active player indicator (hot-seat only) */}
-      {isHotSeat && canAct && (
+      {/* Active player label — hot-seat only */}
+      {(isHotSeat && canAct) && (
         <div className="font-cinzel uppercase text-center" style={{ fontSize: 13, letterSpacing: '0.2em', color: 'rgba(255,209,82,0.5)', marginBottom: 4 }}>
           {activePlayerName}'s turn
-        </div>
-      )}
-
-      {/* Status message */}
-      {statusMsg && (
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#c4b9a8', textAlign: 'center', marginBottom: 8 }}>
-          {statusMsg}
         </div>
       )}
 

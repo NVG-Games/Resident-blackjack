@@ -1,10 +1,13 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import Card from '../Card/Card.jsx';
 
+const NEXT_ROUND_TIMEOUT_SEC = 20;
+
 // isGuestOnline: flip winner/scores perspective for the guest (Hoffman = bot slot in engine)
-export default function RoundResult({ result, onNext, state, isGuestOnline = false }) {
+export default function RoundResult({ result, onNext, state, isGuestOnline = false, isOnline = false, isHost = false, onHostTimeout }) {
   const ref = useRef(null);
+  const [secsLeft, setSecsLeft] = useState(NEXT_ROUND_TIMEOUT_SEC);
 
   useEffect(() => {
     if (!ref.current) return;
@@ -13,6 +16,17 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
       { y: 0, opacity: 1, scale: 1, duration: 0.4, ease: 'back.out(1.5)' }
     );
   }, []);
+
+  // Countdown timer — only for host in online mode
+  useEffect(() => {
+    if (!isOnline || !isHost) return;
+    if (secsLeft <= 0) {
+      onHostTimeout?.();
+      return;
+    }
+    const t = setTimeout(() => setSecsLeft(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [isOnline, isHost, secsLeft, onHostTimeout]);
 
   if (!result) return null;
 
@@ -89,15 +103,28 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
         </div>
 
         <div style={{ padding: '0 16px 16px', width: '100%', boxSizing: 'border-box' }}>
-          <button
-            onClick={onNext}
-            className="font-cinzel uppercase rounded border active:scale-95 transition-all duration-300 w-full"
-            style={{ fontSize: 20, padding: '14px 24px', letterSpacing: '0.12em', background: 'rgba(255,209,82,0.06)', borderColor: 'rgba(255,209,82,0.3)', color: '#f0e2c0' }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.6)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.3)'; }}
-          >
-            Next Round →
-          </button>
+          {/* Online guest: waiting for host */}
+          {isOnline && !isHost ? (
+            <div style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.08em', padding: '14px 0' }}>
+              Waiting for host…
+            </div>
+          ) : (
+            /* Host or non-online: show Next Round button */
+            <button
+              onClick={onNext}
+              className="font-cinzel uppercase rounded border active:scale-95 transition-all duration-300 w-full"
+              style={{ fontSize: 20, padding: '14px 24px', letterSpacing: '0.12em', background: 'rgba(255,209,82,0.06)', borderColor: 'rgba(255,209,82,0.3)', color: '#f0e2c0', position: 'relative' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.6)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.3)'; }}
+            >
+              Next Round →
+              {isOnline && isHost && (
+                <span style={{ position: 'absolute', top: 6, right: 10, fontFamily: 'Cinzel, serif', fontSize: 12, color: secsLeft <= 5 ? '#ef4444' : '#5a5040' }}>
+                  {secsLeft}s
+                </span>
+              )}
+            </button>
+          )}
         </div>
       </div>
     </div>
