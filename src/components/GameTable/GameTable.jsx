@@ -341,13 +341,15 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       <div className="relative z-20 flex flex-col h-full px-2 sm:px-6 py-2 sm:py-4 gap-1 sm:gap-2 overflow-hidden">
 
         {/* TOP: Opponent area */}
+        {/* In online mode: guest (Hoffman) sees playerHand (host/Clancy) as opponent — swap areas */}
         <section className="flex-none flex flex-col items-center gap-1">
           <BotArea
             state={state}
             isThinking={isThinking && !isHotSeat && !isOnline}
             playerName={(isHotSeat || isOnline) ? player2Name : 'Hoffman'}
             hideCards={isHotSeat && !showBotControls && !showRoundResult}
-            hideHoleCard={!isHotSeat && !isOnline}
+            hideHoleCard={!isHotSeat}
+            flipForGuest={isOnline && !isHost}
           />
           {/* LLM reasoning bubble — shown when Claude explains its move */}
           {isLlm && llmReasoning && !isThinking && (
@@ -371,7 +373,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
         {/* MIDDLE: Bet panel + table trumps (compact row) */}
         <section className="flex-none flex flex-col items-center gap-1">
-          <BetPanel state={state} />
+          <BetPanel state={state} isGuestOnline={isOnline && !isHost} />
           <TableTrumps
             playerTableTrumps={state.playerTableTrumps}
             botTableTrumps={state.botTableTrumps}
@@ -417,6 +419,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
             state={state}
             playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
             hideCards={isHotSeat && showBotControls && !showRoundResult}
+            flipForGuest={isOnline && !isHost}
           />
 
           {/* Trump hand */}
@@ -433,7 +436,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
       {/* ROUND RESULT */}
       {showRoundResult && (
-        <RoundResult result={roundResult} onNext={handleNextRound} state={state} />
+        <RoundResult result={roundResult} onNext={handleNextRound} state={state} isGuestOnline={isOnline && !isHost} />
       )}
 
       {/* PHASE / VICTORY / DEFEAT OVERLAY */}

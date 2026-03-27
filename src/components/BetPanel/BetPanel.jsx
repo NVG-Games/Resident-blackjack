@@ -3,7 +3,8 @@ import { gsap } from 'gsap';
 import { getEffectiveTarget, computeBetModifiers } from '../../engine/trumpEngine.js';
 import { getHandTotal } from '../../engine/deck.js';
 
-export default function BetPanel({ state }) {
+// isGuestOnline: online guest (Hoffman) — swap "You"/"Him" labels and health values
+export default function BetPanel({ state, isGuestOnline = false }) {
   const {
     playerBet, botBet, phase, roundNumber,
     playerTableTrumps, botTableTrumps,
@@ -22,6 +23,16 @@ export default function BetPanel({ state }) {
 
   const effectivePlayerBet = Math.max(0, playerBet + playerBetMod);
   const effectiveBotBet = Math.max(0, botBet + botBetMod);
+
+  // Guest's "You" = botHealth (Hoffman), "Him" = playerHealth (Clancy/host)
+  const myHealth = isGuestOnline ? botHealth : playerHealth;
+  const theirHealth = isGuestOnline ? playerHealth : botHealth;
+  const myBet = isGuestOnline ? effectiveBotBet : effectivePlayerBet;
+  const myBetBase = isGuestOnline ? botBet : playerBet;
+  const myBetMod = isGuestOnline ? botBetMod : playerBetMod;
+  const theirBet = isGuestOnline ? effectivePlayerBet : effectiveBotBet;
+  const theirBetBase = isGuestOnline ? playerBet : botBet;
+  const theirBetMod = isGuestOnline ? playerBetMod : botBetMod;
 
   const targetRef = useRef(null);
   const prevTarget = useRef(target);
@@ -53,11 +64,11 @@ export default function BetPanel({ state }) {
 
       {/* Health score — main scoreboard */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <span className="font-cinzel font-black text-amber-300" style={{ fontSize: '1.1rem' }}>{playerHealth}</span>
+        <span className="font-cinzel font-black text-amber-300" style={{ fontSize: '1.1rem' }}>{myHealth}</span>
         <span className="text-stone-600 font-fell text-xs">❤ You</span>
         <span className="text-stone-700 font-cinzel text-sm font-bold">vs</span>
         <span className="text-stone-600 font-fell text-xs">Him ❤</span>
-        <span className="font-cinzel font-black text-red-400" style={{ fontSize: '1.1rem' }}>{botHealth}</span>
+        <span className="font-cinzel font-black text-red-400" style={{ fontSize: '1.1rem' }}>{theirHealth}</span>
       </div>
 
       {/* Target + Stakes */}
@@ -72,9 +83,9 @@ export default function BetPanel({ state }) {
         <div className="flex flex-col items-center">
           <span className="text-stone-600 font-fell text-xs italic">loser pays</span>
           <div className="flex items-center gap-1.5">
-            <BetDisplay label="You" bet={effectivePlayerBet} base={playerBet} mod={playerBetMod} color="amber" compact />
+            <BetDisplay label="You" bet={myBet} base={myBetBase} mod={myBetMod} color="amber" compact />
             <span className="text-stone-700 font-cinzel text-xs">/</span>
-            <BetDisplay label="Him" bet={effectiveBotBet} base={botBet} mod={botBetMod} color="red" compact />
+            <BetDisplay label="Him" bet={theirBet} base={theirBetBase} mod={theirBetMod} color="red" compact />
           </div>
         </div>
       </div>

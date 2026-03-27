@@ -3,17 +3,23 @@ import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
-// hideHoleCard: in AI mode bot's first card is hidden from player; in hot-seat/online all cards visible to owner
-export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false, hideHoleCard = false }) {
-  const { botHand, playerTableTrumps, botTableTrumps, botHealth, botStood, roundState } = state;
+// hideHoleCard: hide opponent's first card (AI mode and online — always hide from the other player)
+// flipForGuest: online guest sees playerHand (host) as their opponent top area
+export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false, hideHoleCard = false, flipForGuest = false }) {
+  const { botHand, playerHand, playerTableTrumps, botTableTrumps, botHealth, playerHealth, botStood, playerStood, roundState } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
+  // Guest sees host's (playerHand) as the opponent hand shown on top
+  const hand = flipForGuest ? playerHand : botHand;
+  const health = flipForGuest ? playerHealth : botHealth;
+  const stood = flipForGuest ? playerStood : botStood;
+
   const isRoundOver = roundState === ROUND_STATE.ROUND_OVER;
-  const faceDownCard = botHand[0];
-  // Hole card is hidden only when hideHoleCard=true (AI mode) AND round is not over
+  const faceDownCard = hand[0];
+  // Always hide hole card from opponent (hideHoleCard=true for AI and online modes)
   const showFaceDown = !hideHoleCard || isRoundOver;
-  const total = getHandTotal(botHand);
-  const faceUpCards = botHand.slice(1);
+  const total = getHandTotal(hand);
+  const faceUpCards = hand.slice(1);
   const isBust = total > target;
 
   return (
@@ -26,7 +32,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
           </div>
           <div className="hidden sm:block text-xs text-stone-500 font-fell italic">Your opponent</div>
         </div>
-        <HealthBar health={botHealth} maxHealth={10} owner="bot" />
+        <HealthBar health={health} maxHealth={10} owner="bot" />
       </div>
 
       {/* Thinking indicator */}
@@ -66,7 +72,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
               )}
             </div>
             {isBust && <div className="text-red-500 text-xs font-fell italic animate-pulse">BUST</div>}
-            {botStood && !isBust && <div className="text-stone-400 text-xs font-fell italic">stood</div>}
+            {stood && !isBust && <div className="text-stone-400 text-xs font-fell italic">stood</div>}
           </div>
         )}
       </div>

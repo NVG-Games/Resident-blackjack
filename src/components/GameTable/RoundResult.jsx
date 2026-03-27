@@ -1,7 +1,8 @@
 import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 
-export default function RoundResult({ result, onNext, state }) {
+// isGuestOnline: flip winner/scores perspective for the guest (Hoffman = bot slot in engine)
+export default function RoundResult({ result, onNext, state, isGuestOnline = false }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -15,8 +16,18 @@ export default function RoundResult({ result, onNext, state }) {
   if (!result) return null;
 
   const { winner, playerTotal, botTotal, target, effectivePlayerBet, effectiveBotBet } = result;
-  const isWin = winner === 'player';
-  const isDraw = winner === 'draw';
+
+  // For guest (Hoffman), engine's "bot wins" means "You Win"
+  const rawIsWin = winner === 'player';
+  const rawIsDraw = winner === 'draw';
+  const isWin = isGuestOnline ? winner === 'bot' : rawIsWin;
+  const isDraw = rawIsDraw;
+
+  // Guest's "You" score = botTotal, "Opponent" score = playerTotal
+  const myTotal = isGuestOnline ? botTotal : playerTotal;
+  const theirTotal = isGuestOnline ? playerTotal : botTotal;
+  const myBet = isGuestOnline ? effectiveBotBet : effectivePlayerBet;
+  const theirBet = isGuestOnline ? effectivePlayerBet : effectiveBotBet;
 
   const titleText = isWin ? 'YOU WIN' : isDraw ? 'DRAW' : 'YOU LOSE';
   const titleColor = isWin ? '#fbbf24' : isDraw ? '#94a3b8' : '#ef4444';
@@ -43,10 +54,10 @@ export default function RoundResult({ result, onNext, state }) {
         <div className="flex gap-5 sm:gap-8 text-center">
           <div>
             <div className="text-xs font-cinzel text-amber-500/70 uppercase tracking-widest mb-1">You</div>
-            <div className={`font-cinzel text-xl sm:text-2xl font-bold ${playerTotal > target ? 'text-red-500' : 'text-amber-300'}`}>
-              {playerTotal}
+            <div className={`font-cinzel text-xl sm:text-2xl font-bold ${myTotal > target ? 'text-red-500' : 'text-amber-300'}`}>
+              {myTotal}
             </div>
-            {playerTotal > target && <div className="text-xs text-red-400 font-fell">BUST</div>}
+            {myTotal > target && <div className="text-xs text-red-400 font-fell">BUST</div>}
           </div>
           <div className="flex flex-col items-center justify-center">
             <div className="text-stone-600 font-fell text-sm italic">vs</div>
@@ -54,10 +65,10 @@ export default function RoundResult({ result, onNext, state }) {
           </div>
           <div>
             <div className="text-xs font-cinzel text-red-500/70 uppercase tracking-widest mb-1">Opponent</div>
-            <div className={`font-cinzel text-xl sm:text-2xl font-bold ${botTotal > target ? 'text-red-500' : 'text-red-300'}`}>
-              {botTotal}
+            <div className={`font-cinzel text-xl sm:text-2xl font-bold ${theirTotal > target ? 'text-red-500' : 'text-red-300'}`}>
+              {theirTotal}
             </div>
-            {botTotal > target && <div className="text-xs text-red-400 font-fell">BUST</div>}
+            {theirTotal > target && <div className="text-xs text-red-400 font-fell">BUST</div>}
           </div>
         </div>
 
@@ -66,8 +77,8 @@ export default function RoundResult({ result, onNext, state }) {
           style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
           {isWin && (
             <span className="text-stone-300">
-              Hoffman loses{' '}
-              <span className="text-amber-400 font-bold text-base">{effectiveBotBet}</span>
+              Opponent loses{' '}
+              <span className="text-amber-400 font-bold text-base">{theirBet}</span>
               <span className="text-stone-500"> hp</span>
               <span className="text-stone-600 text-xs block italic">his stake — you won</span>
             </span>
@@ -75,7 +86,7 @@ export default function RoundResult({ result, onNext, state }) {
           {!isWin && !isDraw && (
             <span className="text-stone-300">
               You lose{' '}
-              <span className="text-red-400 font-bold text-base">{effectivePlayerBet}</span>
+              <span className="text-red-400 font-bold text-base">{myBet}</span>
               <span className="text-stone-500"> hp</span>
               <span className="text-stone-600 text-xs block italic">your stake — he won</span>
             </span>
@@ -84,8 +95,8 @@ export default function RoundResult({ result, onNext, state }) {
             <div className="text-stone-400">
               Both lose health
               <div className="flex justify-center gap-4 mt-1">
-                <span>You: <span className="text-red-400 font-bold">−{effectivePlayerBet}</span></span>
-                <span>Him: <span className="text-red-400 font-bold">−{effectiveBotBet}</span></span>
+                <span>You: <span className="text-red-400 font-bold">−{myBet}</span></span>
+                <span>Him: <span className="text-red-400 font-bold">−{theirBet}</span></span>
               </div>
             </div>
           )}
@@ -93,8 +104,8 @@ export default function RoundResult({ result, onNext, state }) {
 
         {/* Health bars — before/after */}
         <div className="flex gap-6 sm:gap-10">
-          <MiniHealth health={state.playerHealth} max={10} label="You" color="amber" />
-          <MiniHealth health={state.botHealth} max={10} label="Hoffman" color="red" />
+          <MiniHealth health={isGuestOnline ? state.botHealth : state.playerHealth} max={10} label="You" color="amber" />
+          <MiniHealth health={isGuestOnline ? state.playerHealth : state.botHealth} max={10} label="Opponent" color="red" />
         </div>
 
         <button

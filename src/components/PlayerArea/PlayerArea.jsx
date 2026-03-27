@@ -3,10 +3,17 @@ import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
-export default function PlayerArea({ state, playerName = 'Clancy', hideCards = false }) {
-  const { playerHand, playerTableTrumps, botTableTrumps, playerHealth, playerStood, roundState } = state;
+// flipForGuest: online guest's own hand is botHand (engine slot 2), shown at bottom
+export default function PlayerArea({ state, playerName = 'Clancy', hideCards = false, flipForGuest = false }) {
+  const { playerHand, botHand, playerTableTrumps, botTableTrumps, playerHealth, botHealth, playerStood, botStood, roundState } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
-  const total = getHandTotal(playerHand);
+
+  // Guest's own cards are in botHand (engine slot 2)
+  const hand = flipForGuest ? botHand : playerHand;
+  const health = flipForGuest ? botHealth : playerHealth;
+  const stood = flipForGuest ? botStood : playerStood;
+
+  const total = getHandTotal(hand);
   const isBust = total > target;
   const isClose = total >= target - 2 && !isBust;
   const isRoundOver = roundState === ROUND_STATE.ROUND_OVER;
@@ -15,28 +22,28 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
     <div className="flex flex-col items-center gap-1 sm:gap-3">
       {/* Cards */}
       <div className="flex items-end gap-1 sm:gap-2" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
-        {playerHand.length > 0 && (
+        {hand.length > 0 && (
           <div className="relative">
-            <Card key={playerHand[0].id} card={playerHand[0]} faceDown={false} isNew={true} />
+            <Card key={hand[0].id} card={hand[0]} faceDown={false} isNew={true} />
             {/* Hole card label — only visible to this player */}
             <div className="absolute -bottom-4 left-0 right-0 text-center">
               <span className="text-xs text-stone-500 font-fell italic">
-                🔒 {playerHand[0].value}
+                🔒 {hand[0].value}
               </span>
             </div>
           </div>
         )}
-        {playerHand.slice(1).map((card, idx) => (
+        {hand.slice(1).map((card, idx) => (
           <Card
             key={card.id}
             card={card}
             faceDown={false}
             isNew={true}
             dealIndex={idx}
-            highlight={isClose && idx === playerHand.length - 2}
+            highlight={isClose && idx === hand.length - 2}
           />
         ))}
-        {playerHand.length > 0 && (
+        {hand.length > 0 && (
           <div className="ml-1 sm:ml-2 flex flex-col items-center justify-center">
             <div className={`font-cinzel text-2xl sm:text-3xl font-bold transition-colors duration-300 ${
               isBust ? 'text-red-600' : isClose ? 'text-amber-300' : 'text-stone-200'
@@ -45,14 +52,14 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
             </div>
             {isBust && <div className="text-red-500 text-sm font-fell italic animate-pulse">BUST</div>}
             {!isBust && <div className="text-stone-500 text-xs font-fell">of {target}</div>}
-            {playerStood && !isBust && <div className="text-stone-400 text-xs font-fell italic">stood</div>}
+            {stood && !isBust && <div className="text-stone-400 text-xs font-fell italic">stood</div>}
           </div>
         )}
       </div>
 
       {/* Player identity */}
       <div className="flex items-center gap-2 sm:gap-3">
-        <HealthBar health={playerHealth} maxHealth={10} />
+        <HealthBar health={health} maxHealth={10} />
         <div className="text-center">
           <div className="font-cinzel text-xs sm:text-sm font-bold text-amber-300 tracking-widest uppercase">
             {playerName}
