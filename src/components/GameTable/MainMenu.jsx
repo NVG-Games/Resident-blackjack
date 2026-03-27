@@ -230,7 +230,9 @@ export default function MainMenu({ onStart }) {
           >
             🃏 Real Game Assistant
           </button>
-          <button
+          {/* LLM mode only available when MCP server URL is configured (local dev / Docker).
+              Hidden on GitHub Pages and Telegram where no MCP server runs. */}
+          {import.meta.env.VITE_MCP_URL && <button
             className={btnBase}
             style={{
               ...btnStyle,
@@ -250,7 +252,7 @@ export default function MainMenu({ onStart }) {
             onClick={() => onStart({ mode: 'llm' })}
           >
             ✦ Play vs Claude AI
-          </button>
+          </button>}
         </div>
 
       </div>
