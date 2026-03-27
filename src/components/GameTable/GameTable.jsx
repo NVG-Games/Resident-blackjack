@@ -364,7 +364,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       />
 
       {/* Main game layout — single column, fills viewport */}
-      <div className="relative z-20 flex flex-col h-full px-3 sm:px-6 gap-2 sm:gap-3" style={{ paddingTop: '12px', paddingBottom: '90px' }}>
+      <div className="relative z-20 flex flex-col h-full px-3 sm:px-6 gap-2 sm:gap-3" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
 
         {/* TOP: Bet panel */}
         <section className="flex-none w-full">
@@ -413,7 +413,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </section>
 
         {/* BOTTOM: Player area + Trump hand */}
-        <section className="flex-none flex flex-col items-center mt-auto" style={{ paddingBottom: '120px', paddingTop: 12, gap: 20 }}>
+        <section className="flex-none flex flex-col items-center mt-auto" style={{ paddingBottom: 'calc(120px + env(safe-area-inset-bottom))', paddingTop: 12, gap: 20 }}>
           <PlayerArea
             state={state}
             playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
@@ -453,7 +453,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       )}
 
       {/* ACTION BUTTONS — fixed to bottom, respects iOS home indicator */}
-      <div className="absolute z-30" style={{ bottom: 0, left: 0, right: 0, background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '10px 12px 12px' }}>
+      <div className="absolute z-30" style={{ bottom: 0, left: 0, right: 0, background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '10px 12px calc(12px + env(safe-area-inset-bottom))' }}>
         {/* Turn timer — radial */}
         {turnSecondsLeft !== null && (() => {
           const pct = turnSecondsLeft / TURN_TIMER_SEC;
