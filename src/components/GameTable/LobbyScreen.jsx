@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { gsap } from 'gsap';
 import { useLobby, generateRoomCode } from '../../hooks/useLobby.js';
 import { usePeerContext } from '../../contexts/PeerContext.jsx';
@@ -25,7 +25,7 @@ const btnBase =
 export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJoinCode }) {
   const containerRef = useRef(null);
   const { rooms, loading, error, announce, remove, refresh } = useLobby();
-  const { peerId, peerStatus, connStatus, initPeer, connectToPeer, onData, onOpen } = usePeerContext();
+  const { peerId, peerStatus, connStatus, initPeer, connectToPeer, send, onData, onOpen } = usePeerContext();
   const { tgUser, isTelegram } = useTelegram();
 
   const [isHosting, setIsHosting] = useState(false);
@@ -54,7 +54,18 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialJoinCode, loading, rooms]);
 
-  // Register data listener: guest receives GAME_INFO from host
+  // Host: when a guest opens the connection, send GAME_INFO and move to waiting room
+  useEffect(() => {
+    if (!isHosting) return;
+    const unsub = onOpen(() => {
+      // Send game info to guest so they know the room code and seed
+      send({ type: 'GAME_INFO', code: hostCode, seed: hostSeed });
+      onHostReady({ code: hostCode, seed: hostSeed, isHost: true });
+    });
+    return unsub;
+  }, [isHosting, hostCode, hostSeed, onOpen, onHostReady, send]);
+
+  // Guest: receive GAME_INFO from host → move to waiting room
   useEffect(() => {
     const unsub = onData((data) => {
       if (data?.type === 'GAME_INFO') {
@@ -63,15 +74,6 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
     });
     return unsub;
   }, [onData, onJoinReady]);
-
-  // Register open listener: host side — a guest connected
-  useEffect(() => {
-    if (!isHosting) return;
-    const unsub = onOpen(() => {
-      onHostReady({ code: hostCode, seed: hostSeed, isHost: true });
-    });
-    return unsub;
-  }, [isHosting, hostCode, hostSeed, onOpen, onHostReady]);
 
   // Announce to lobby when peerId is available after hosting
   useEffect(() => {

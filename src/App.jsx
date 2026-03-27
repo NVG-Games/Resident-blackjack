@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import GameTable from './components/GameTable/GameTable.jsx';
 import MainMenu from './components/GameTable/MainMenu.jsx';
 import RoleSelect from './components/GameTable/RoleSelect.jsx';
 import LobbyScreen from './components/GameTable/LobbyScreen.jsx';
 import WaitingRoom from './components/GameTable/WaitingRoom.jsx';
 import AssistantMode from './components/GameTable/AssistantMode.jsx';
+import { usePeerContext } from './contexts/PeerContext.jsx';
 
 // Read Telegram deep-link start_param at boot time (static — won't change during session)
 // e.g. opened via t.me/BOT?startapp=WOLF-42
@@ -20,6 +21,10 @@ export default function App() {
   // P2P online config passed through lobby → waiting → game
   // { isHost, code, seed, hostPeerId? }
   const [onlineState, setOnlineState] = useState(null);
+
+  const [disconnectMsg, setDisconnectMsg] = useState(null);
+
+  const { send, onData, onClose } = usePeerContext();
 
   // ── Menu ──────────────────────────────────────────────────────────────────
   const handleMenuStart = ({ mode }) => {
@@ -60,27 +65,72 @@ export default function App() {
   // ── WaitingRoom: host clicks "Begin the Ordeal" ───────────────────────────
   const handleWaitingStart = useCallback(() => {
     if (!onlineState) return;
+    // Tell the guest to start too
+    send({ type: 'HOST_START_GAME', seed: onlineState.seed });
     setGameConfig({
       mode: 'online',
       playerRole: 'clancy', // host is always Clancy
       seed: onlineState.seed,
     });
     setScreen('game');
-  }, [onlineState]);
+  }, [onlineState, send]);
+
+  // ── Guest: listen for host's START signal (in lobby or waiting room) ───────
+  useEffect(() => {
+    const unsub = onData((data) => {
+      if (data?.type === 'HOST_START_GAME') {
+        setGameConfig({ mode: 'online', playerRole: 'hoffman', seed: data.seed });
+        setOnlineState((s) => s ? { ...s, opponentConnected: true } : s);
+        setScreen('game');
+      }
+    });
+    return unsub;
+  }, [onData]);
+
+  // ── Disconnect handler ────────────────────────────────────────────────────
+  useEffect(() => {
+    const unsub = onClose(() => {
+      // Only show disconnect if we're actively in a multiplayer session
+      setDisconnectMsg('Opponent disconnected.');
+      // If in game, return to menu after a moment
+      setScreen((s) => {
+        if (s === 'game' || s === 'waiting') {
+          setTimeout(() => {
+            setDisconnectMsg(null);
+            setOnlineState(null);
+          }, 3000);
+          return 'menu';
+        }
+        return s;
+      });
+    });
+    return unsub;
+  }, [onClose]);
 
   // ── Navigation helpers ────────────────────────────────────────────────────
   const handleBackToMenu = () => {
     setOnlineState(null);
+    setDisconnectMsg(null);
     setScreen('menu');
   };
 
   const handleReturnToMenu = () => {
     setOnlineState(null);
+    setDisconnectMsg(null);
     setScreen('menu');
   };
 
   return (
     <div className="grain w-screen h-screen overflow-hidden" style={{ background: '#0d0805' }}>
+      {/* Disconnect notification */}
+      {disconnectMsg && (
+        <div
+          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-3 px-4 font-cinzel text-sm tracking-widest uppercase"
+          style={{ background: 'rgba(139,0,0,0.95)', borderBottom: '1px solid #8b0000', color: '#f0e2c0' }}
+        >
+          ⚠ {disconnectMsg}
+        </div>
+      )}
       {screen === 'menu' && (
         <MainMenu onStart={handleMenuStart} />
       )}
