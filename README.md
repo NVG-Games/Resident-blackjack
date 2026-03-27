@@ -32,7 +32,11 @@ A faithful web recreation of the card game "21" from **Resident Evil 7: Biohazar
 
 ---
 
-## Quick Start (Local Dev)
+## Setup
+
+> **Full setup guide** (local dev, Docker, GitHub Pages, troubleshooting): **[SETUP.md](SETUP.md)**
+
+### TL;DR — Local Dev
 
 ```bash
 git clone https://github.com/NVG-Games/Resident-blackjack.git
@@ -41,12 +45,7 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173).
-
-```bash
-npm run build    # Production build → dist/
-npm run preview  # Preview locally
-```
+Open [http://localhost:5173](http://localhost:5173). No `.env`, no accounts, no config needed.
 
 ---
 
