@@ -16,7 +16,7 @@ export const PHASE_CONFIG = {
   SHOCK: {
     label: 'Shock Phase',
     description: 'Lose and you get electrocuted. The voltage increases each round.',
-    rounds: 4,
+    rounds: 3,
     baseBet: 1,
     hasTrumps: true,
     color: '#1a3a8b',

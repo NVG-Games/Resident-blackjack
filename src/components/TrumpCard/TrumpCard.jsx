@@ -16,6 +16,7 @@ export default function TrumpCard({
   const cardRef = useRef(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const def = TRUMP_DEFINITIONS[trump.type] || {};
   const isPermanent = PERMANENT_TRUMPS.has(trump.type);
   const imgSrc = TRUMP_IMAGES[trump.type];
@@ -36,7 +37,12 @@ export default function TrumpCard({
 
 
   const handleClick = () => {
-    if (disabled || isOnTable) return;
+    if (disabled) return;
+    if (isOnTable) {
+      setShowInfo(true);
+      setShowTooltip(false);
+      return;
+    }
     setShowConfirm(true);
     setShowTooltip(false);
   };
@@ -69,8 +75,8 @@ export default function TrumpCard({
     <div className={`relative select-none ${className}`} style={{ display: 'inline-block' }}>
       <div
         ref={cardRef}
-        role={(!disabled && !isOnTable) ? 'button' : undefined}
-        tabIndex={(!disabled && !isOnTable) ? 0 : undefined}
+        role={!disabled ? 'button' : undefined}
+        tabIndex={!disabled ? 0 : undefined}
         onClick={handleClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
@@ -80,7 +86,7 @@ export default function TrumpCard({
           disabled
             ? 'opacity-40 cursor-not-allowed'
             : isOnTable
-              ? 'cursor-default'
+              ? 'cursor-pointer hover:scale-105'
               : 'cursor-pointer hover:scale-105 hover:-translate-y-1'
         }`}
         style={{
@@ -154,6 +160,69 @@ export default function TrumpCard({
           <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2
             w-2.5 h-2.5 bg-stone-950 border-r border-b rotate-45" style={{ borderColor: 'rgba(255,209,82,0.15)' }} />
         </div>
+      )}
+
+      {/* Info modal — for table cards (read-only) */}
+      {showInfo && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9000,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={() => setShowInfo(false)}
+        >
+          <div
+            style={{ width: 'min(90vw, 420px)', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              background: '#0e0c09',
+              border: '1px solid rgba(255,209,82,0.25)',
+              borderRadius: 12,
+              boxShadow: '0 16px 64px rgba(0,0,0,0.98)',
+              overflow: 'hidden',
+            }}>
+              {imgSrc && (
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 24, paddingBottom: 4 }}>
+                  <img src={imgSrc} alt={def.name} style={{ width: 90, height: 126, objectFit: 'contain', borderRadius: 6 }} />
+                </div>
+              )}
+              <div style={{ padding: '20px 28px 28px' }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 26, fontWeight: 700, color: '#ffd152', marginBottom: 12 }}>
+                  {def.name || trump.type}
+                </div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#e8d5b0', lineHeight: 1.65 }}>
+                  {def.description || '—'}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 18, fontFamily: 'Cinzel, serif', fontSize: 16, color: '#7a6a50' }}>
+                  <span>{isPermanent ? '📌' : '⚡'}</span>
+                  <span style={{ color: '#fbbf24' }}>{isPermanent ? 'Active this round' : 'Instant effect'}</span>
+                </div>
+              </div>
+              <div style={{ borderTop: '1px solid rgba(255,209,82,0.1)' }}>
+                <button
+                  onClick={() => setShowInfo(false)}
+                  style={{
+                    width: '100%', padding: '18px', fontFamily: 'Cinzel, serif', fontSize: 18,
+                    fontWeight: 700, color: '#ffd152', background: 'rgba(255,209,82,0.06)',
+                    border: 'none', cursor: 'pointer',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,209,82,0.15)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,209,82,0.06)'}
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* Confirm modal */}

@@ -402,7 +402,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </section>
 
         {/* CENTER: Deck (left, absolute) + Table Trumps (true center) */}
-        <section className="flex-1 relative flex items-center justify-center w-full min-h-0">
+        <section className="flex-1 relative flex items-center justify-center w-full min-h-0" style={{ zIndex: 5 }}>
           <div className="absolute left-0 top-1/2 -translate-y-1/2">
             <DeckPile count={state.deck.length} />
           </div>

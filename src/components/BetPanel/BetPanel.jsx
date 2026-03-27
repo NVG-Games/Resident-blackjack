@@ -2,6 +2,7 @@ import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { getEffectiveTarget, computeBetModifiers } from '../../engine/trumpEngine.js';
 import { getHandTotal } from '../../engine/deck.js';
+import { PHASE_CONFIG } from '../../engine/constants.js';
 
 export default function BetPanel({ state, isGuestOnline = false }) {
   const {
@@ -76,7 +77,7 @@ export default function BetPanel({ state, isGuestOnline = false }) {
       {/* Round */}
       <div style={cell}>
         <span style={label}>Round</span>
-        <span style={{ ...value, fontSize: 18, color: '#c4b9a8' }}>{roundNumber} / 3</span>
+        <span style={{ ...value, fontSize: 18, color: '#c4b9a8' }}>{roundNumber} / {PHASE_CONFIG[phase]?.rounds ?? 3}</span>
       </div>
 
       <div style={divider} />
