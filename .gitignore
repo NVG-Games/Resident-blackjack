@@ -45,3 +45,4 @@ Thumbs.db
 # Lock files (keep only one — npm is used here)
 yarn.lock
 pnpm-lock.yaml
+scripts/generate-assets.mjs
