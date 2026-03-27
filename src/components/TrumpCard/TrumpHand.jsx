@@ -1,4 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import TrumpCard from './TrumpCard.jsx';
 import { ROUND_STATE } from '../../engine/gameState.js';
@@ -17,13 +18,18 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
     }
   }, []);
 
+  const handlePlay = (trump) => {
+    setOpen(false);
+    onPlay?.(trump);
+  };
+
   if (trumps.length === 0) return null;
 
   return (
     <div ref={containerRef}>
-      {/* Toggle bar */}
+      {/* Toggle button */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(true)}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -55,26 +61,72 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
             <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#7a6a50', alignSelf: 'center' }}>+{trumps.length - 5}</span>
           )}
         </div>
-        <span style={{ marginLeft: 'auto', fontFamily: 'Cinzel, serif', fontSize: 18, color: '#7a6a50' }}>
-          {open ? '▲' : '▼'}
-        </span>
+        <span style={{ marginLeft: 'auto', fontFamily: 'Cinzel, serif', fontSize: 18, color: '#7a6a50' }}>▼</span>
       </button>
 
-      {/* Cards — visible only when open */}
-      {open && (
-        <div className="flex gap-2 overflow-x-auto pb-1"
-          style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
-          {trumps.map((trump) => (
-            <TrumpCard
-              key={trump.id}
-              trump={trump}
-              onClick={onPlay}
-              disabled={!canPlay}
-              isNew={false}
-              size="hand"
-            />
-          ))}
-        </div>
+      {/* Modal */}
+      {open && createPortal(
+        <div
+          onClick={() => setOpen(false)}
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9000,
+            background: 'rgba(0,0,0,0.75)',
+            display: 'flex',
+            alignItems: 'flex-end',
+            justifyContent: 'center',
+          }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%',
+              maxWidth: 600,
+              background: '#0e0c09',
+              borderTop: '1px solid rgba(255,209,82,0.2)',
+              borderRadius: '16px 16px 0 0',
+              padding: '20px 20px calc(20px + env(safe-area-inset-bottom))',
+              boxShadow: '0 -8px 40px rgba(0,0,0,0.9)',
+            }}
+          >
+            {/* Header */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#ffd152', letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+                Trump Cards
+              </span>
+              <button
+                onClick={() => setOpen(false)}
+                style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#7a6a50', background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1, padding: '4px 8px' }}
+                onMouseEnter={e => e.currentTarget.style.color = '#e8d5b0'}
+                onMouseLeave={e => e.currentTarget.style.color = '#7a6a50'}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Cards grid */}
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+              {trumps.map((trump) => (
+                <TrumpCard
+                  key={trump.id}
+                  trump={trump}
+                  onClick={handlePlay}
+                  disabled={!canPlay}
+                  isNew={false}
+                  size="hand"
+                />
+              ))}
+            </div>
+
+            {!canPlay && (
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a5040', textAlign: 'center', marginTop: 16, fontStyle: 'italic' }}>
+                Not your turn
+              </p>
+            )}
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
