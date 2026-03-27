@@ -188,6 +188,26 @@ export default function MainMenu({ onStart }) {
           >
             Play vs Yourself
           </button>
+          <button
+            className={btnBase}
+            style={{
+              ...btnStyle,
+              borderColor: '#003a5a',
+              background: 'linear-gradient(135deg, rgba(0,58,90,0.2), rgba(0,0,0,0.8))',
+              boxShadow: '0 0 20px rgba(0,58,90,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+            }}
+            onMouseEnter={(e) => gsap.to(e.currentTarget, {
+              boxShadow: '0 0 40px rgba(0,80,140,0.7), inset 0 0 20px rgba(0,0,0,0.5)',
+              duration: 0.3,
+            })}
+            onMouseLeave={(e) => gsap.to(e.currentTarget, {
+              boxShadow: '0 0 20px rgba(0,58,90,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+              duration: 0.3,
+            })}
+            onClick={() => onStart({ mode: 'online' })}
+          >
+            Multiplayer (P2P)
+          </button>
         </div>
 
       </div>

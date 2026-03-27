@@ -1,4 +1,4 @@
-import { createDeck, shuffleDeck, drawCard, getHandTotal, isBust, drawBestCard } from './deck.js';
+import { createDeck, shuffleDeck, shuffleDeckWithSeed, drawCard, getHandTotal, isBust, drawBestCard } from './deck.js';
 import { PHASES, PHASE_CONFIG, TRUMP_TYPES, PERMANENT_TRUMPS, MAX_TABLE_TRUMPS } from './constants.js';
 import { drawNTrumps, getEffectiveTarget, computeBetModifiers, applyTrump, applyMindShiftEnd, createTrump, drawRandomTrump } from './trumpEngine.js';
 import { PLAYER_TRUMP_POOL, BOT_TRUMP_POOL } from './constants.js';
@@ -27,7 +27,7 @@ export const ROUND_STATE = {
   ROUND_OVER: 'ROUND_OVER',
 };
 
-function createInitialState() {
+export function createInitialState() {
   return {
     phase: PHASES.FINGER,
     roundNumber: 0,
@@ -85,7 +85,10 @@ export function gameReducer(state, action) {
 
     case ACTIONS.START_ROUND: {
       const hasTrumps = PHASE_CONFIG[state.phase].hasTrumps;
-      const shuffled = shuffleDeck(createDeck());
+      // Support seeded shuffle for P2P online mode (ensures identical decks on both clients)
+      const shuffled = action.seed != null
+        ? shuffleDeckWithSeed(createDeck(), action.seed)
+        : shuffleDeck(createDeck());
       const { playerHand, botHand, deck } = dealInitialCards(shuffled);
 
       // Give starting trumps
@@ -424,4 +427,3 @@ export function gameReducer(state, action) {
   }
 }
 
-export { createInitialState };

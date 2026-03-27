@@ -4,11 +4,20 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+      args:
+        # Pass VITE_PEER_* build-args so the SPA points to the self-hosted PeerJS server.
+        # Override these in .env or CI to use the public PeerJS cloud instead.
+        VITE_PEER_HOST: ${VITE_PEER_HOST:-}
+        VITE_PEER_PORT: ${VITE_PEER_PORT:-9000}
+        VITE_PEER_PATH: ${VITE_PEER_PATH:-/}
     image: resident-blackjack:latest
     container_name: resident-blackjack
     ports:
       - "8080:80"
     restart: unless-stopped
+    depends_on:
+      peerjs:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:80/"]
       interval: 30s
@@ -17,3 +26,21 @@ services:
       start_period: 10s
     labels:
       com.resident-blackjack.description: "RE7 21 card game — static SPA"
+
+  # Optional self-hosted PeerJS signalling server.
+  # Remove the `depends_on` block above and this service if you prefer the public PeerJS cloud.
+  peerjs:
+    image: peerjs/peerjs-server:latest
+    container_name: resident-blackjack-peerjs
+    ports:
+      - "9000:9000"
+    command: ["--port", "9000", "--path", "/"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    labels:
+      com.resident-blackjack.description: "PeerJS WebRTC signalling server"

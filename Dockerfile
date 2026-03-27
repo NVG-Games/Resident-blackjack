@@ -1,6 +1,16 @@
 # ── Stage 1: Build ──────────────────────────────────────────────────────────
 FROM node:22-alpine AS builder
 
+# Accept PeerJS config as build args; default empty = use public PeerJS cloud
+ARG VITE_PEER_HOST=""
+ARG VITE_PEER_PORT="9000"
+ARG VITE_PEER_PATH="/"
+
+# Expose to Vite at build time
+ENV VITE_PEER_HOST=$VITE_PEER_HOST \
+    VITE_PEER_PORT=$VITE_PEER_PORT \
+    VITE_PEER_PATH=$VITE_PEER_PATH
+
 WORKDIR /app
 
 # Copy dependency manifests first for layer caching

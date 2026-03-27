@@ -3,6 +3,8 @@ import { gsap } from 'gsap';
 
 import { gameReducer, ACTIONS, ROUND_STATE, createInitialState } from '../../engine/gameState.js';
 import { getBotDecision } from '../../engine/aiBot.js';
+import { usePeerContext } from '../../contexts/PeerContext.jsx';
+import { generateSeed } from '../../engine/deck.js';
 
 import BotArea from '../BotArea/BotArea.jsx';
 import PlayerArea from '../PlayerArea/PlayerArea.jsx';
@@ -20,9 +22,13 @@ const BOT_FAST_DELAY_MS = 350;
 
 // playerRole: 'clancy' = you are Clancy (player), Hoffman is bot
 //             'hoffman' = you are Hoffman (bot slot), Clancy is opponent
-// In hot-seat both are human — role only changes labels.
-export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturnToMenu }) {
+// In hot-seat/online both are human — role only changes labels.
+// seed: optional number for P2P online mode to synchronise deck shuffle.
+export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: seedProp, onReturnToMenu }) {
   const isHotSeat = mode === 'hotseat';
+  const isOnline = mode === 'online';
+  // In online mode: host = Clancy (player slot), guest = Hoffman (bot slot).
+  const isHost = isOnline && playerRole === 'clancy';
 
   // playerRole affects name labels. Engine is unchanged: "player" = top of reducer, "bot" = bottom.
   // If you picked Hoffman: the "player" slot is labelled Hoffman, "bot" slot is labelled Clancy.
@@ -38,6 +44,27 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
       subMessage: 'No trump cards. Card count carefully. Lose... and Lucas takes your fingers.',
     },
   }));
+
+  // ── P2P Online: shared PeerJS connection from PeerContext ────────────────
+  // PeerContext holds the singleton Peer+conn that was established in LobbyScreen.
+  // GameTable subscribes to incoming actions and sends local actions via context.
+  const { send: peerSend, onData } = usePeerContext();
+
+  // Subscribe to remote actions for the lifetime of the game
+  useEffect(() => {
+    if (!isOnline) return;
+    const unsub = onData((action) => {
+      if (!action?.type) return;
+      dispatch(action);
+    });
+    return unsub;
+  }, [isOnline, onData]);
+
+  // Synced dispatch: local action dispatched AND mirrored to remote peer
+  const syncedDispatch = useCallback((action) => {
+    dispatch(action);
+    if (isOnline) peerSend(action);
+  }, [isOnline, peerSend]);
 
   const [isThinking, setIsThinking] = useState(false);
 
@@ -62,23 +89,42 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
   }, []);
 
   // Auto-start round when in DEALING state (and no overlay blocking)
+  // In online mode only the host fires START_ROUND (it includes the seed so both stay in sync)
   useEffect(() => {
     if (state.roundState === ROUND_STATE.DEALING && !state.overlay) {
-      const t = setTimeout(() => dispatch({ type: ACTIONS.START_ROUND }), 250);
+      if (isOnline && !isHost) return; // guest waits for host's START_ROUND via data channel
+      const t = setTimeout(() => {
+        const action = isOnline
+          ? { type: ACTIONS.START_ROUND, seed: seedProp ?? generateSeed() }
+          : { type: ACTIONS.START_ROUND };
+        if (isOnline) {
+          syncedDispatch(action);
+        } else {
+          dispatch(action);
+        }
+      }, 250);
       return () => clearTimeout(t);
     }
-  }, [state.roundState, state.overlay]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.roundState, state.overlay, isOnline, isHost]);
 
   // Auto-resolve when both players have stood
+  // In online mode only host resolves (to stay authoritative)
   useEffect(() => {
     if (
       state.roundState === ROUND_STATE.PLAYER_TURN &&
       state.playerStood && state.botStood
     ) {
-      const t = setTimeout(() => dispatch({ type: ACTIONS.RESOLVE_ROUND }), 700);
+      if (isOnline && !isHost) return;
+      const t = setTimeout(() => {
+        const action = { type: ACTIONS.RESOLVE_ROUND };
+        if (isOnline) syncedDispatch(action);
+        else dispatch(action);
+      }, 700);
       return () => clearTimeout(t);
     }
-  }, [state.playerStood, state.botStood, state.roundState]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.playerStood, state.botStood, state.roundState, isOnline, isHost]);
 
   // Shake on round loss
   useEffect(() => {
@@ -86,8 +132,20 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
   }, [state.roundResult, shakeTable]);
 
   // Hot-seat: when BOT_TURN starts, show handoff screen (unless bot already stood)
+  // Online guest: no handoff needed — they ARE the bot slot already
   useEffect(() => {
-    if (!isHotSeat) return;
+    if (!isHotSeat && !isOnline) return;
+    if (isOnline) {
+      // Guest: BOT_TURN is the guest's turn — activate bot controls directly
+      if (state.roundState === ROUND_STATE.BOT_TURN && !state.botStood) {
+        setHotSeatBotActive(true);
+      }
+      if (state.roundState !== ROUND_STATE.BOT_TURN) {
+        setHotSeatBotActive(false);
+      }
+      return;
+    }
+    // Hot-seat path
     if (state.roundState === ROUND_STATE.BOT_TURN && !state.botStood && !hotSeatBotActive) {
       setShowHandoff(true);
     }
@@ -95,7 +153,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
       setShowHandoff(false);
       setHotSeatBotActive(false);
     }
-  }, [state.roundState, state.botStood, isHotSeat, hotSeatBotActive]);
+  }, [state.roundState, state.botStood, isHotSeat, isOnline, hotSeatBotActive]);
 
   // Hot-seat: if bot already stood when BOT_TURN is triggered, dispatch stand immediately
   useEffect(() => {
@@ -108,9 +166,9 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
     }
   }, [state.roundState, state.botStood, isHotSeat]);
 
-  // AI Bot logic — only runs in AI mode
+  // AI Bot logic — only runs in AI mode (disabled in hot-seat and online)
   useEffect(() => {
-    if (isHotSeat) return;
+    if (isHotSeat || isOnline) return;
     if (state.roundState !== ROUND_STATE.BOT_TURN) {
       botProcessingRef.current = false;
       return;
@@ -144,30 +202,50 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
 
   stateRef.current = state;
 
-  // Player 1 actions (PLAYER_TURN)
-  const handleHit = useCallback(() => dispatch({ type: ACTIONS.PLAYER_HIT }), []);
-  const handleStand = useCallback(() => dispatch({ type: ACTIONS.PLAYER_STAND }), []);
-  const handlePlayTrump = useCallback((trump) =>
-    dispatch({ type: ACTIONS.PLAYER_USE_TRUMP, trump }), []);
+  // Player 1 actions (PLAYER_TURN) — mirrored to peer in online mode
+  const handleHit = useCallback(() => {
+    const a = { type: ACTIONS.PLAYER_HIT };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
+  const handleStand = useCallback(() => {
+    const a = { type: ACTIONS.PLAYER_STAND };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
+  const handlePlayTrump = useCallback((trump) => {
+    const a = { type: ACTIONS.PLAYER_USE_TRUMP, trump };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
 
-  // Player 2 (hot-seat bot slot) actions — dispatches as BOT_ACTION
-  const handleBotHit = useCallback(() =>
-    dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } }), []);
-  const handleBotStand = useCallback(() =>
-    dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } }), []);
-  const handleBotPlayTrump = useCallback((trump) =>
-    dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } }), []);
+  // Player 2 actions:
+  // - hot-seat: human controls bot slot, dispatches BOT_ACTION locally
+  // - online (guest/Hoffman): guest's moves are their "player" perspective but engine sees them as BOT
+  const handleBotHit = useCallback(() => {
+    const a = { type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
+  const handleBotStand = useCallback(() => {
+    const a = { type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
+  const handleBotPlayTrump = useCallback((trump) => {
+    const a = { type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
 
   const handleDismissOverlay = useCallback(() => {
     if (state.gameOver) {
-      dispatch({ type: ACTIONS.START_GAME });
+      if (isOnline) syncedDispatch({ type: ACTIONS.START_GAME });
+      else dispatch({ type: ACTIONS.START_GAME });
     } else {
-      dispatch({ type: ACTIONS.DISMISS_OVERLAY });
+      if (isOnline) syncedDispatch({ type: ACTIONS.DISMISS_OVERLAY });
+      else dispatch({ type: ACTIONS.DISMISS_OVERLAY });
     }
-  }, [state.gameOver]);
+  }, [state.gameOver, isOnline, syncedDispatch]);
 
-  const handleNextRound = useCallback(() =>
-    dispatch({ type: ACTIONS.NEXT_ROUND }), []);
+  const handleNextRound = useCallback(() => {
+    const a = { type: ACTIONS.NEXT_ROUND };
+    if (isOnline) syncedDispatch(a); else dispatch(a);
+  }, [isOnline, syncedDispatch]);
 
   const handleHandoffReady = useCallback(() => {
     setShowHandoff(false);
@@ -181,17 +259,21 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
   const isBotTurn = roundState === ROUND_STATE.BOT_TURN;
   const isPlayerTurn = roundState === ROUND_STATE.PLAYER_TURN;
 
-  // In hot-seat mode during BOT_TURN (after handoff) — show bot controls
-  const showBotControls = isHotSeat && isBotTurn && hotSeatBotActive && !showHandoff;
+  // In hot-seat/online mode during BOT_TURN (after handoff/directly) — show bot controls
+  // Online guest (Hoffman): hotSeatBotActive is set when BOT_TURN fires
+  const showBotControls = (isHotSeat || isOnline) && isBotTurn && hotSeatBotActive && !showHandoff;
 
   // In AI mode: disable when thinking or not player turn
   // In hot-seat player turn: always active when it's PLAYER_TURN
+  // Online host (Clancy): disabled unless PLAYER_TURN; guest (Hoffman): disabled unless BOT_TURN
   const isActionDisabled = isHotSeat
     ? !isPlayerTurn
-    : isThinking || !isPlayerTurn;
+    : isOnline
+      ? (isHost ? !isPlayerTurn : !isBotTurn || !hotSeatBotActive)
+      : isThinking || !isPlayerTurn;
 
   // Active player name for display
-  const activePlayerLabel = isHotSeat
+  const activePlayerLabel = (isHotSeat || isOnline)
     ? (showBotControls ? player2Name : player1Name)
     : player1Name;
 
@@ -243,8 +325,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
         <section className="flex-none flex justify-center items-start pt-1">
           <BotArea
             state={state}
-            isThinking={isThinking && !isHotSeat}
-            playerName={isHotSeat ? player2Name : 'Hoffman'}
+            isThinking={isThinking && !isHotSeat && !isOnline}
+            playerName={(isHotSeat || isOnline) ? player2Name : 'Hoffman'}
             hideCards={isHotSeat && !showBotControls && !showRoundResult}
           />
         </section>
@@ -286,7 +368,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
             onHit={showBotControls ? handleBotHit : handleHit}
             onStand={showBotControls ? handleBotStand : handleStand}
             disabled={showBotControls ? false : isActionDisabled}
-            isHotSeat={isHotSeat}
+            isHotSeat={isHotSeat || isOnline}
             showBotControls={showBotControls}
             activePlayerName={activePlayerLabel}
             isBotTurnActive={isBotTurn && !showHandoff}
@@ -297,7 +379,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', onReturn
         <section className="flex-none flex flex-col items-center gap-3 pb-1">
           <PlayerArea
             state={state}
-            playerName={isHotSeat ? player1Name : 'Clancy'}
+            playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
             hideCards={isHotSeat && showBotControls && !showRoundResult}
           />
 
