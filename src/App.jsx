@@ -27,14 +27,13 @@ export default function App() {
   const { send, onData, onClose } = usePeerContext();
 
   // ── Menu ──────────────────────────────────────────────────────────────────
-  const handleMenuStart = ({ mode, fastPlay }) => {
+  const handleMenuStart = ({ mode }) => {
     if (mode === 'ai') {
       setGameConfig({ mode: 'ai', playerRole: 'clancy' });
       setScreen('game');
     } else if (mode === 'hotseat') {
       setScreen('roleselect');
     } else if (mode === 'online') {
-      setGameConfig((c) => ({ ...c, fastPlay: fastPlay ?? false }));
       setScreen('lobby');
     } else if (mode === 'assistant') {
       setScreen('assistant');
@@ -151,7 +150,6 @@ export default function App() {
           onHostReady={handleHostReady}
           onJoinReady={handleJoinReady}
           initialJoinCode={TG_START_PARAM}
-          fastPlay={gameConfig.fastPlay ?? false}
         />
       )}
       {screen === 'waiting' && onlineState && (

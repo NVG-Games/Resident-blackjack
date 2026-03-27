@@ -116,7 +116,7 @@ export default function MainMenu({ onStart }) {
         {/* Buttons */}
         <div ref={btnsRef} className="flex flex-col w-full max-w-xs" style={{ gap: 0 }}>
 
-          {/* PRIMARY: Fast Play */}
+          {/* PRIMARY: Multiplayer */}
           <button
             className={btnBase}
             style={{
@@ -131,30 +131,9 @@ export default function MainMenu({ onStart }) {
             }}
             onMouseEnter={(e) => gsap.to(e.currentTarget, { background: 'rgba(255,209,82,0.13)', borderColor: 'rgba(255,209,82,0.8)', color: '#ffe680', duration: 0.2 })}
             onMouseLeave={(e) => gsap.to(e.currentTarget, { background: 'rgba(255,209,82,0.06)', borderColor: 'rgba(255,209,82,0.45)', color: '#ffd152', duration: 0.2 })}
-            onClick={() => onStart({ mode: 'online', fastPlay: true })}
-          >
-            ⚡ Fast Play
-          </button>
-
-          {/* Be Host — small, subtle */}
-          <button
-            className={btnBase}
-            style={{
-              fontSize: 13,
-              padding: '8px 16px',
-              letterSpacing: '0.06em',
-              color: '#5a5040',
-              background: 'transparent',
-              border: '1px solid rgba(255,209,82,0.1)',
-              borderRadius: 4,
-              width: '100%',
-              marginTop: 8,
-            }}
-            onMouseEnter={(e) => gsap.to(e.currentTarget, { color: '#7a6a50', borderColor: 'rgba(255,209,82,0.25)', duration: 0.2 })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, { color: '#5a5040', borderColor: 'rgba(255,209,82,0.1)', duration: 0.2 })}
             onClick={() => onStart({ mode: 'online' })}
           >
-            Be Host / Browse Rooms
+            Multiplayer
           </button>
 
           {/* Divider between primary and secondary */}
