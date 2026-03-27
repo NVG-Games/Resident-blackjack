@@ -55,8 +55,8 @@ export default function MainMenu({ onStart }) {
     boxShadow: '0 0 20px rgba(139,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
   };
 
-  const btnBase = `font-cinzel text-sm font-bold tracking-[0.3em] uppercase
-    px-10 py-4 rounded border-2 transition-all duration-200
+  const btnBase = `font-cinzel text-sm font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase
+    px-6 sm:px-10 py-4 sm:py-4 rounded border-2 transition-all duration-200
     hover:scale-105 active:scale-95 w-full`;
 
   return (
@@ -94,23 +94,23 @@ export default function MainMenu({ onStart }) {
         </div>
       ))}
 
-      {/* Decorative cards in background */}
-      <div ref={cardsRef} className="absolute flex gap-4 opacity-15" style={{ top: '8%' }}>
+      {/* Decorative cards in background — hidden on very small screens */}
+      <div ref={cardsRef} className="absolute hidden sm:flex gap-4 opacity-15" style={{ top: '8%' }}>
         {[1, 5, 9, 3, 11, 7].map((val, i) => (
           <StartCard key={i} value={val} rotation={-15 + i * 6} />
         ))}
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-8 px-8 text-center max-w-lg w-full">
+      <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-8 px-6 sm:px-8 text-center max-w-lg w-full">
 
         {/* Title */}
         <div ref={titleRef}>
-          <div className="font-fell italic text-stone-500 text-sm tracking-[0.5em] uppercase mb-2">
+          <div className="font-fell italic text-stone-500 text-xs sm:text-sm tracking-[0.4em] sm:tracking-[0.5em] uppercase mb-1 sm:mb-2">
             Lucas Baker presents
           </div>
           <h1
-            className="font-cinzel font-black text-7xl md:text-8xl tracking-[0.2em] uppercase"
+            className="font-cinzel font-black text-6xl sm:text-7xl md:text-8xl tracking-[0.2em] uppercase"
             style={{
               color: '#f0e2c0',
               textShadow: '0 0 20px rgba(139,0,0,0.7), 0 4px 8px rgba(0,0,0,0.9)',
@@ -118,7 +118,7 @@ export default function MainMenu({ onStart }) {
           >
             21
           </h1>
-          <div className="font-cinzel text-xs tracking-[0.8em] uppercase text-stone-500 mt-2">
+          <div className="font-cinzel text-xs tracking-[0.5em] sm:tracking-[0.8em] uppercase text-stone-500 mt-1 sm:mt-2">
             Resident Evil VII — Card Game
           </div>
         </div>
@@ -130,19 +130,20 @@ export default function MainMenu({ onStart }) {
           <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, #8b0000, transparent)' }} />
         </div>
 
-        {/* Subtitle */}
-        <div ref={subtitleRef}>
-          <p className="font-fell italic text-stone-400 text-base leading-relaxed">
-            "A modified game of Blackjack. One deck, eleven cards numbered 1 through 11.
-            No duplicates. You and your opponent share the same deck."
+        {/* Subtitle — shorter on mobile */}
+        <div ref={subtitleRef} className="px-2">
+          <p className="font-fell italic text-stone-400 text-sm sm:text-base leading-relaxed">
+            <span className="hidden sm:inline">"A modified game of Blackjack. One deck, eleven cards numbered 1 through 11.
+            No duplicates. You and your opponent share the same deck."</span>
+            <span className="sm:hidden">"One deck, eleven cards. No duplicates. Survive all three phases."</span>
           </p>
-          <p className="font-fell italic text-stone-600 text-sm mt-3">
-            — Survive all three phases. Finger. Shock. Saw.
+          <p className="font-fell italic text-stone-600 text-xs sm:text-sm mt-2 sm:mt-3">
+            — Finger. Shock. Saw.
           </p>
         </div>
 
-        {/* Phase grid */}
-        <div className="grid grid-cols-3 gap-4 w-full text-center">
+        {/* Phase grid — hidden on small phones to save space */}
+        <div className="hidden sm:grid grid-cols-3 gap-4 w-full text-center">
           {[
             { icon: '✂', phase: 'Finger', desc: 'No trump cards' },
             { icon: '⚡', phase: 'Shock', desc: 'Trumps introduced' },

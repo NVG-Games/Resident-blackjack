@@ -39,9 +39,13 @@ export default function ActionButtons({
   }, [canAct, showBotControls]);
 
   const buttonBase = `
-    font-cinzel text-sm font-bold uppercase tracking-widest
-    px-8 py-3 rounded border transition-all duration-200
+    font-cinzel font-bold uppercase tracking-widest
+    text-sm sm:text-sm
+    px-6 sm:px-8 py-4 sm:py-3
+    min-w-[5rem] sm:min-w-0
+    rounded border transition-all duration-200
     disabled:opacity-30 disabled:cursor-not-allowed
+    active:scale-95
   `;
 
   // Status message when no action is available
@@ -69,11 +73,9 @@ export default function ActionButtons({
       {/* Active player indicator (hot-seat only) */}
       {isHotSeat && canAct && (
         <div
-          className="font-cinzel text-xs tracking-[0.3em] uppercase px-4 py-1 rounded"
+          className="font-cinzel text-xs tracking-[0.2em] sm:tracking-[0.3em] uppercase px-3 sm:px-4 py-1 rounded"
           style={{
-            background: showBotControls
-              ? 'rgba(90,58,0,0.3)'
-              : 'rgba(139,0,0,0.2)',
+            background: showBotControls ? 'rgba(90,58,0,0.3)' : 'rgba(139,0,0,0.2)',
             border: `1px solid ${showBotControls ? '#5a3a00' : '#8b0000'}`,
             color: showBotControls ? '#f5c842' : '#f0e2c0',
           }}
@@ -82,7 +84,7 @@ export default function ActionButtons({
         </div>
       )}
 
-      <div className="flex items-center gap-4 justify-center">
+      <div className="flex items-center gap-3 sm:gap-4 justify-center">
         {/* HIT */}
         <button
           ref={hitRef}

@@ -168,8 +168,8 @@ export default function Card({
       onClick={onClick}
       className={`relative cursor-pointer select-none ${className}`}
       style={{
-        width: '80px',
-        height: '112px',
+        width: 'clamp(52px, 12vw, 80px)',
+        height: 'clamp(73px, 17vw, 112px)',
         perspective: '600px',
         transformStyle: 'preserve-3d',
       }}

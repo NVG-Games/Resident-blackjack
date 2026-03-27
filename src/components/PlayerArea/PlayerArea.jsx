@@ -12,26 +12,19 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
   const isRoundOver = roundState === ROUND_STATE.ROUND_OVER;
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      {/* Cards — hidden when it's the other player's turn in hot-seat */}
-      <div className="flex items-end gap-2 min-h-[120px]" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
-        {/* Face-down card — revealed at round end */}
+    <div className="flex flex-col items-center gap-1 sm:gap-3">
+      {/* Cards */}
+      <div className="flex items-end gap-1 sm:gap-2" style={{ filter: hideCards ? 'blur(8px)' : 'none', transition: 'filter 0.3s' }}>
         {playerHand.length > 0 && (
           <div className="relative">
-            <Card
-              card={playerHand[0]}
-              faceDown={!isRoundOver}
-              isNew={false}
-            />
-            <div className="absolute -bottom-5 left-0 right-0 text-center">
+            <Card card={playerHand[0]} faceDown={!isRoundOver} isNew={false} />
+            <div className="absolute -bottom-4 left-0 right-0 text-center">
               <span className="text-xs text-stone-500 font-fell italic">
-                {isRoundOver ? playerHand[0].value : 'hidden'}
+                {isRoundOver ? playerHand[0].value : '?'}
               </span>
             </div>
           </div>
         )}
-
-        {/* Face-up cards */}
         {playerHand.slice(1).map((card, idx) => (
           <Card
             key={card.id}
@@ -41,38 +34,28 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
             highlight={isClose && idx === playerHand.length - 2}
           />
         ))}
-
-        {/* Score */}
         {playerHand.length > 0 && (
-          <div className="ml-2 flex flex-col items-center justify-center">
-            <div className={`font-cinzel text-3xl font-bold transition-colors duration-300 ${
+          <div className="ml-1 sm:ml-2 flex flex-col items-center justify-center">
+            <div className={`font-cinzel text-2xl sm:text-3xl font-bold transition-colors duration-300 ${
               isBust ? 'text-red-600' : isClose ? 'text-amber-300' : 'text-stone-200'
             }`}>
               {total}
             </div>
-            {isBust && (
-              <div className="text-red-500 text-sm font-fell italic animate-pulse">BUST</div>
-            )}
-            {!isBust && (
-              <div className="text-stone-500 text-xs font-fell">
-                of {target}
-              </div>
-            )}
-            {playerStood && !isBust && (
-              <div className="text-stone-400 text-xs font-fell italic mt-1">stood</div>
-            )}
+            {isBust && <div className="text-red-500 text-sm font-fell italic animate-pulse">BUST</div>}
+            {!isBust && <div className="text-stone-500 text-xs font-fell">of {target}</div>}
+            {playerStood && !isBust && <div className="text-stone-400 text-xs font-fell italic">stood</div>}
           </div>
         )}
       </div>
 
       {/* Player identity */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3">
         <HealthBar health={playerHealth} maxHealth={10} />
         <div className="text-center">
-          <div className="font-cinzel text-sm font-bold text-amber-300 tracking-widest uppercase">
+          <div className="font-cinzel text-xs sm:text-sm font-bold text-amber-300 tracking-widest uppercase">
             {playerName}
           </div>
-          <div className="text-xs text-stone-500 font-fell italic">You</div>
+          <div className="hidden sm:block text-xs text-stone-500 font-fell italic">You</div>
         </div>
       </div>
     </div>

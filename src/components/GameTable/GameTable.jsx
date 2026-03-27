@@ -318,11 +318,11 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       {/* Blood drips */}
       <BloodDrips />
 
-      {/* Main game layout */}
-      <div className="relative z-20 flex flex-col h-full px-6 py-4 gap-2">
+      {/* Main game layout — single column, fills viewport */}
+      <div className="relative z-20 flex flex-col h-full px-2 sm:px-6 py-2 sm:py-4 gap-1 sm:gap-2 overflow-hidden">
 
-        {/* TOP: Hoffman / player2 */}
-        <section className="flex-none flex justify-center items-start pt-1">
+        {/* TOP: Opponent area */}
+        <section className="flex-none flex justify-center items-start">
           <BotArea
             state={state}
             isThinking={isThinking && !isHotSeat && !isOnline}
@@ -331,31 +331,29 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           />
         </section>
 
-        {/* MIDDLE: Bet panel */}
-        <section className="flex-none flex justify-center">
+        {/* MIDDLE: Bet panel + table trumps (compact row) */}
+        <section className="flex-none flex flex-col items-center gap-1">
           <BetPanel state={state} />
-        </section>
-
-        {/* TABLE TRUMPS */}
-        <section className="flex-none flex justify-center">
           <TableTrumps
             playerTableTrumps={state.playerTableTrumps}
             botTableTrumps={state.botTableTrumps}
           />
         </section>
 
-        {/* CENTER: Deck + Log */}
-        <section className="flex-1 flex gap-4 items-stretch min-h-0">
-          <div className="flex-1 flex items-center justify-center">
+        {/* CENTER: Deck + Log side by side on desktop, deck only on mobile */}
+        <section className="flex-1 flex gap-2 sm:gap-4 items-center justify-center min-h-0">
+          <div className="flex items-center justify-center">
             <DeckPile count={state.deck.length} />
           </div>
-          <div className="w-px bg-stone-900" />
-          <div className="w-72 flex flex-col"
+          {/* Log: hidden on small screens, visible on sm+ */}
+          <div className="hidden sm:flex w-px bg-stone-900 self-stretch" />
+          <div className="hidden sm:flex w-60 md:w-72 flex-col min-h-0"
             style={{
               background: 'rgba(0,0,0,0.5)',
               border: '1px solid rgba(139,0,0,0.2)',
               borderRadius: '6px',
               padding: '8px',
+              maxHeight: '160px',
             }}>
             <GameLog log={state.log} />
           </div>
@@ -375,15 +373,15 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           />
         </section>
 
-        {/* BOTTOM: Clancy / player1 */}
-        <section className="flex-none flex flex-col items-center gap-3 pb-1">
+        {/* BOTTOM: Player area + Trump hand */}
+        <section className="flex-none flex flex-col items-center gap-1 sm:gap-3 pb-1">
           <PlayerArea
             state={state}
             playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
             hideCards={isHotSeat && showBotControls && !showRoundResult}
           />
 
-          {/* Trump hand: switches between p1/p2 in hot-seat */}
+          {/* Trump hand */}
           <div className="w-full max-w-lg">
             <TrumpHand
               trumps={activeTrumpHand}

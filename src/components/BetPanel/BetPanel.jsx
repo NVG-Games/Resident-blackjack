@@ -42,33 +42,32 @@ export default function BetPanel({ state }) {
   };
 
   return (
-    <div className="flex flex-col items-center gap-2 px-4 py-2
-      bg-black/40 rounded-lg border border-stone-800 backdrop-blur-sm">
+    <div className="flex flex-col items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2
+      bg-black/40 rounded-lg border border-stone-800 backdrop-blur-sm w-full max-w-xs sm:max-w-none sm:w-auto">
 
       {/* Phase indicator */}
       <div className={`font-cinzel text-xs font-bold tracking-widest uppercase ${phaseColors[phase] || 'text-stone-400'}`}>
-        {phase.replace('_', ' ')} PHASE · Round {roundNumber}
+        {phase.replace('_', ' ')} · R{roundNumber}
       </div>
 
-      {/* Target */}
-      <div className="flex items-center gap-2">
-        <span className="text-stone-500 font-fell text-sm italic">Target:</span>
-        <span ref={targetRef} className="font-cinzel text-2xl font-bold text-amber-300">
-          {target}
-        </span>
-      </div>
-
-      {/* Bets */}
-      <div className="flex gap-6 text-center">
-        <BetDisplay label="Your Risk" bet={effectivePlayerBet} base={playerBet} mod={playerBetMod} color="amber" />
-        <div className="w-px bg-stone-700" />
-        <BetDisplay label="His Risk" bet={effectiveBotBet} base={botBet} mod={botBetMod} color="red" />
+      {/* Target + Bets in one row on mobile */}
+      <div className="flex items-center gap-3 sm:gap-6">
+        <div className="flex items-center gap-1.5">
+          <span className="text-stone-500 font-fell text-xs italic">→</span>
+          <span ref={targetRef} className="font-cinzel text-xl sm:text-2xl font-bold text-amber-300">
+            {target}
+          </span>
+        </div>
+        <div className="w-px h-6 bg-stone-700" />
+        <BetDisplay label="You" bet={effectivePlayerBet} base={playerBet} mod={playerBetMod} color="amber" compact />
+        <div className="w-px h-6 bg-stone-700" />
+        <BetDisplay label="Him" bet={effectiveBotBet} base={botBet} mod={botBetMod} color="red" compact />
       </div>
     </div>
   );
 }
 
-function BetDisplay({ label, bet, base, mod, color }) {
+function BetDisplay({ label, bet, base, mod, color, compact = false }) {
   const betRef = useRef(null);
   const prevBet = useRef(bet);
 
@@ -91,7 +90,7 @@ function BetDisplay({ label, bet, base, mod, color }) {
   return (
     <div className="flex flex-col items-center">
       <span className={`text-xs font-cinzel ${colors.label} tracking-wide`}>{label}</span>
-      <div ref={betRef} className={`font-cinzel text-xl font-bold ${colors.base}`}>
+      <div ref={betRef} className={`font-cinzel font-bold ${colors.base} ${compact ? 'text-lg' : 'text-xl'}`}>
         {bet}
         {mod !== 0 && (
           <span className={`text-xs ml-1 ${colors.mod}`}>
@@ -99,7 +98,7 @@ function BetDisplay({ label, bet, base, mod, color }) {
           </span>
         )}
       </div>
-      <span className="text-xs text-stone-600 font-fell">health pts</span>
+      {!compact && <span className="text-xs text-stone-600 font-fell">health pts</span>}
     </div>
   );
 }

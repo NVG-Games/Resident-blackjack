@@ -25,12 +25,14 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState }) {
   }
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-2">
+    <div ref={containerRef} className="flex flex-col gap-1 sm:gap-2">
       <div className="text-xs font-cinzel text-stone-500 uppercase tracking-widest text-center">
-        Your Trump Cards
+        Trump Cards
       </div>
-      <div className="flex flex-wrap gap-2 justify-center max-w-md">
-        {trumps.map((trump, idx) => (
+      {/* Horizontally scrollable on mobile, wraps on desktop */}
+      <div className="flex gap-2 justify-start sm:justify-center sm:flex-wrap overflow-x-auto pb-1 px-1"
+        style={{ scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' }}>
+        {trumps.map((trump) => (
           <TrumpCard
             key={trump.id}
             trump={trump}
@@ -43,7 +45,7 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState }) {
       </div>
       {!canPlay && (
         <div className="text-xs text-stone-600 font-fell italic text-center">
-          {roundState === ROUND_STATE.BOT_TURN ? "Waiting for Hoffman..." : "Not your turn"}
+          {roundState === ROUND_STATE.BOT_TURN ? "Waiting..." : "Not your turn"}
         </div>
       )}
     </div>

@@ -38,11 +38,12 @@ export default function TrumpCard({
     onClick?.(trump);
   };
 
+  // Slightly larger on mobile via clamp — hand cards are tap targets
   const dims = {
-    hand:  { w: 72,  h: 100, nameSz: '8px'  },
-    table: { w: 56,  h: 78,  nameSz: '7px'  },
-    mini:  { w: 38,  h: 52,  nameSz: '6px'  },
-  }[size] || { w: 72, h: 100, nameSz: '8px' };
+    hand:  { w: 'clamp(60px,16vw,72px)',  h: 'clamp(84px,22vw,100px)', nameSz: '8px'  },
+    table: { w: 'clamp(44px,12vw,56px)',  h: 'clamp(62px,17vw,78px)',  nameSz: '7px'  },
+    mini:  { w: 38,                        h: 52,                        nameSz: '6px'  },
+  }[size] || { w: 'clamp(60px,16vw,72px)', h: 'clamp(84px,22vw,100px)', nameSz: '8px' };
 
   return (
     <div className={`relative select-none ${className}`} style={{ display: 'inline-block' }}>
@@ -51,6 +52,8 @@ export default function TrumpCard({
         onClick={handleClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
+        onTouchStart={() => setShowTooltip(true)}
+        onTouchEnd={() => setTimeout(() => setShowTooltip(false), 1500)}
         className={`relative transition-all duration-150 rounded ${
           disabled
             ? 'opacity-40 cursor-not-allowed'
