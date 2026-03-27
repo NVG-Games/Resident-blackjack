@@ -17,11 +17,11 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
     );
   }, []);
 
-  // Countdown timer — only for host in online mode
+  // Countdown timer — runs for both host and guest in online mode
   useEffect(() => {
-    if (!isOnline || !isHost) return;
+    if (!isOnline) return;
     if (secsLeft <= 0) {
-      onHostTimeout?.();
+      if (isHost) onHostTimeout?.();
       return;
     }
     const t = setTimeout(() => setSecsLeft(s => s - 1), 1000);
@@ -105,8 +105,9 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
         <div style={{ padding: '0 16px 16px', width: '100%', boxSizing: 'border-box' }}>
           {/* Online guest: waiting for host */}
           {isOnline && !isHost ? (
-            <div style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.08em', padding: '14px 0' }}>
-              Waiting for host…
+            <div style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', padding: '14px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <span style={{ fontSize: 16, color: '#5a5040', letterSpacing: '0.08em' }}>Waiting for host…</span>
+              <span style={{ fontSize: 13, color: secsLeft <= 5 ? '#ef4444' : '#3a3428', letterSpacing: '0.05em' }}>{secsLeft}s</span>
             </div>
           ) : (
             /* Host or non-online: show Next Round button */

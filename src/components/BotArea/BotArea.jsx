@@ -29,7 +29,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
           <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {playerName}
           </div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#9c8e76', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
             {isActivePlayer ? 'You' : 'Opponent'}
           </div>
         </div>
@@ -99,11 +99,11 @@ function BotFanHand({ cards, faceDownCard, faceUpCards, showFaceDown, scoreColor
             <span style={{ fontSize: 16, color: '#3a3428', marginLeft: 3 }}>+?</span>
           )}
         </span>
-        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: isBust ? '#e57373' : '#5a5040' }}>
+        <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: isBust ? '#e57373' : '#9c8e76' }}>
           {isBust ? 'BUST' : `of ${target}`}
         </span>
         {stood && !isBust && (
-          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#5a5040', letterSpacing: '0.1em' }}>· stood</span>
+          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#9c8e76', letterSpacing: '0.1em' }}>· stood</span>
         )}
       </div>
       </div>
@@ -117,7 +117,7 @@ function HealthBar({ health, maxHealth }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0' }}>
-        {health}<span style={{ fontSize: 13, color: '#5a5040' }}>/{maxHealth}</span>
+        {health}<span style={{ fontSize: 13, color: '#9c8e76' }}>/{maxHealth}</span>
       </div>
       <div style={{ display: 'flex', gap: 2 }}>
         {pips.map((alive, i) => (

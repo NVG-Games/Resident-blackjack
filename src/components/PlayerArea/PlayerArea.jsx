@@ -26,7 +26,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
           {hand.map((_, idx) => (
             <Card key={idx} card={{ value: 0, suit: '?' }} faceDown={true} />
           ))}
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#5a5040', marginLeft: 10, fontStyle: 'italic' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#9c8e76', marginLeft: 10, fontStyle: 'italic' }}>
             hidden
           </div>
         </div>
@@ -50,7 +50,7 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
           <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: isOpponent ? '#e8d5b0' : '#ffd152', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
             {playerName}
           </div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#9c8e76', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
             {isOpponent ? 'Opponent' : 'You'}
           </div>
         </div>
@@ -92,11 +92,11 @@ function FanHand({ cards, scoreColor, total, target, isBust, stood, isClose, sho
           <span style={{ fontFamily: 'Cinzel, serif', fontWeight: 900, fontSize: 38, lineHeight: 1, color: scoreColor }}>
             {total}
           </span>
-          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a5040' }}>
+          <span style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#9c8e76' }}>
             {isBust ? 'BUST' : `of ${target}`}
           </span>
           {stood && !isBust && (
-            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#5a5040', letterSpacing: '0.1em' }}>· stood</span>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 12, color: '#9c8e76', letterSpacing: '0.1em' }}>· stood</span>
           )}
         </div>
       </div>
@@ -110,7 +110,7 @@ function HealthBar({ health, maxHealth }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
       <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0' }}>
-        {health}<span style={{ fontSize: 13, color: '#5a5040' }}>/{maxHealth}</span>
+        {health}<span style={{ fontSize: 13, color: '#9c8e76' }}>/{maxHealth}</span>
       </div>
       <div style={{ display: 'flex', gap: 2 }}>
         {pips.map((alive, i) => (

@@ -230,6 +230,29 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   // Turn timer — 60s countdown, auto-stand on expiry. Active in AI, LLM and Online modes (not hotseat).
   const TURN_TIMER_SEC = 60;
   const [turnSecondsLeft, setTurnSecondsLeft] = useState(null);
+  const [opponentSecondsLeft, setOpponentSecondsLeft] = useState(null);
+
+  // Derived turn state — declared here so all useEffects below can reference them
+  const isBotTurn = state.roundState === ROUND_STATE.BOT_TURN;
+  const isPlayerTurn = state.roundState === ROUND_STATE.PLAYER_TURN;
+
+  // Opponent wait timer — shows countdown while waiting for opponent's move (online only)
+  useEffect(() => {
+    if (!isOnline || isHotSeat || state.gameOver) { setOpponentSecondsLeft(null); return; }
+    const isMyTurn = isHost ? isPlayerTurn : isBotTurn;
+    const isOpponentTurn = isHost ? isBotTurn : isPlayerTurn;
+    if (!isOpponentTurn || isMyTurn) { setOpponentSecondsLeft(null); return; }
+
+    setOpponentSecondsLeft(TURN_TIMER_SEC);
+    const interval = setInterval(() => {
+      setOpponentSecondsLeft(prev => {
+        if (prev === null || prev <= 1) { clearInterval(interval); return null; }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.roundState, state.gameOver, isOnline, isHost, isPlayerTurn, isBotTurn]);
 
   useEffect(() => {
     if (isHotSeat) return;
@@ -314,10 +337,6 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const { roundState, overlay, roundResult, gameOver } = state;
   const showRoundResult = roundState === ROUND_STATE.ROUND_OVER && !overlay && !gameOver;
 
-  // Determine whose turn it is and what actions to expose
-  const isBotTurn = roundState === ROUND_STATE.BOT_TURN;
-  const isPlayerTurn = roundState === ROUND_STATE.PLAYER_TURN;
-
   // Hot-seat pass-and-play:
   // After every roundState change, confirmedPlayer resets to null.
   // HandoffScreen shows until the right player confirms.
@@ -355,8 +374,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const activeTrumpDisabled = showBotControls ? false : isActionDisabled;
 
   return (
-    <div ref={tableRef} className="relative w-full flex flex-col"
-      style={{ flex: 1, minHeight: 0, fontFamily: 'Cinzel, serif' }}>
+    <div ref={tableRef} className="relative w-full h-full flex flex-col"
+      style={{ fontFamily: 'Cinzel, serif' }}>
 
       {/* Background: noir black */}
       <div className="absolute inset-0"
@@ -562,9 +581,39 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
               msg = isBotTurn ? 'Waiting for Hoffman…' : state.playerStood ? 'You stood. Hoffman plays…' : null;
             }
           }
+          const oppSecs = opponentSecondsLeft;
+          const oppDanger = oppSecs !== null && oppSecs <= 10;
+          const oppColor = oppDanger ? '#ef4444' : '#ffd152';
+          const oppCirc = 2 * Math.PI * 22;
           return (
-            <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {msg && <span style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.06em' }}>{msg}</span>}
+            <div style={{ height: 64, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}>
+              {msg && oppSecs !== null ? (
+                <>
+                  <svg width={56} height={56} style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+                    <circle cx={28} cy={28} r={22} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
+                    <circle
+                      cx={28} cy={28} r={22} fill="none"
+                      stroke={oppColor} strokeWidth={3}
+                      strokeDasharray={oppCirc}
+                      strokeDashoffset={oppCirc * (1 - oppSecs / TURN_TIMER_SEC)}
+                      strokeLinecap="round"
+                      style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+                    />
+                    <text
+                      x={28} y={28}
+                      textAnchor="middle" dominantBaseline="central"
+                      style={{ transform: 'rotate(90deg)', transformOrigin: '28px 28px', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, fill: oppColor }}
+                    >
+                      {oppSecs}
+                    </text>
+                  </svg>
+                  <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: oppDanger ? '#ef4444' : '#7a6a50', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                    {msg}
+                  </span>
+                </>
+              ) : msg ? (
+                <span style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.06em' }}>{msg}</span>
+              ) : null}
             </div>
           );
         })()}

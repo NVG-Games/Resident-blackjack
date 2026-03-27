@@ -63,10 +63,8 @@ export default function MainMenu({ onStart }) {
 
   return (
     <div
-      className="w-full flex flex-col items-center justify-center relative overflow-hidden"
+      className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        flex: 1,
-        minHeight: 0,
         background: 'radial-gradient(ellipse at 50% 40%, #120e08 0%, #080604 60%, #030201 100%)',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',

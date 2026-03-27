@@ -116,7 +116,7 @@ export default function AssistantMode({ onBack }) {
   const draws = history.filter(r => r.winner === 'draw').length;
 
   return (
-    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', background: '#080604', fontFamily: 'Cinzel, serif', color: '#e8d5b0' }}>
+    <div style={{ minHeight: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', background: '#080604', fontFamily: 'Cinzel, serif', color: '#e8d5b0' }}>
 
       {/* ── TOP BAR ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'max(8px, env(safe-area-inset-top)) 20px 8px', borderBottom: '1px solid rgba(255,209,82,0.15)', background: 'rgba(0,0,0,0.6)' }}>

@@ -78,10 +78,8 @@ export default function RoleSelect({ onConfirm, onBack }) {
   return (
     <div
       ref={containerRef}
-      className="w-full flex flex-col items-center justify-center relative overflow-hidden"
+      className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        flex: 1,
-        minHeight: 0,
         background: 'radial-gradient(ellipse at 50% 40%, #120e09 0%, #080604 60%, #040302 100%)',
         paddingTop: 'env(safe-area-inset-top)',
         paddingBottom: 'env(safe-area-inset-bottom)',

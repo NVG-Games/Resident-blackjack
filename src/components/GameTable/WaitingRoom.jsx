@@ -59,12 +59,8 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
 
   return (
     <div
-      className="flex items-center justify-center p-4"
+      className="min-h-screen flex items-center justify-center p-4"
       style={{
-        flex: 1,
-        minHeight: 0,
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
         background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
         paddingTop: 'max(16px, env(safe-area-inset-top))',
         paddingBottom: 'max(16px, env(safe-area-inset-bottom))',

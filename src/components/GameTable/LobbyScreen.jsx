@@ -153,8 +153,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
     <div
       ref={containerRef}
       style={{
-        flex: 1,
-        minHeight: 0,
+        minHeight: '100dvh',
         display: 'flex',
         flexDirection: 'column',
         background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',

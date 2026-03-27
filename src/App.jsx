@@ -23,6 +23,7 @@ export default function App() {
   const [onlineState, setOnlineState] = useState(null);
 
   const [disconnectMsg, setDisconnectMsg] = useState(null);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
 
   const { send, onData, onClose } = usePeerContext();
 
@@ -90,22 +91,24 @@ export default function App() {
   // ── Disconnect handler ────────────────────────────────────────────────────
   useEffect(() => {
     const unsub = onClose(() => {
-      // Only show disconnect if we're actively in a multiplayer session
-      setDisconnectMsg('Opponent disconnected.');
-      // If in game, return to menu after a moment
       setScreen((s) => {
-        if (s === 'game' || s === 'waiting') {
-          setTimeout(() => {
-            setDisconnectMsg(null);
-            setOnlineState(null);
-          }, 3000);
-          return 'menu';
+        // Show modal if we're in any online-related screen
+        if (s === 'game' || s === 'waiting' || s === 'lobby') {
+          setShowDisconnectModal(true);
+          setOnlineState(null);
         }
         return s;
       });
     });
     return unsub;
   }, [onClose]);
+
+  const handleDisconnectModalClose = () => {
+    setShowDisconnectModal(false);
+    setDisconnectMsg(null);
+    setOnlineState(null);
+    setScreen('menu');
+  };
 
   // ── Navigation helpers ────────────────────────────────────────────────────
   const handleBackToMenu = () => {
@@ -122,22 +125,63 @@ export default function App() {
 
   return (
     <div
-      className="grain w-screen"
-      style={{
-        background: '#0d0805',
-        height: '100dvh',
-        overflow: 'clip',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
+      className="grain w-screen h-screen overflow-hidden"
+      style={{ background: '#0d0805', height: '100dvh' }}
     >
-      {/* Disconnect notification */}
-      {disconnectMsg && (
+      {/* Disconnect modal */}
+      {showDisconnectModal && (
         <div
-          className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center py-3 px-4 font-cinzel text-sm tracking-widest uppercase"
-          style={{ background: 'rgba(139,0,0,0.95)', borderBottom: '1px solid #8b0000', color: '#f0e2c0' }}
+          className="fixed inset-0 z-50 flex items-center justify-center"
+          style={{
+            background: 'rgba(0,0,0,0.85)',
+            backdropFilter: 'blur(4px)',
+            paddingTop: 'env(safe-area-inset-top)',
+            paddingBottom: 'env(safe-area-inset-bottom)',
+            paddingLeft: 'env(safe-area-inset-left)',
+            paddingRight: 'env(safe-area-inset-right)',
+          }}
         >
-          ⚠ {disconnectMsg}
+          <div style={{
+            background: '#0c0a07',
+            border: '1px solid rgba(139,0,0,0.5)',
+            borderRadius: 8,
+            padding: '32px 28px',
+            maxWidth: 320,
+            width: '90%',
+            textAlign: 'center',
+            boxShadow: '0 0 60px rgba(139,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 20,
+          }}>
+            <div style={{ fontSize: 36 }}>⚠</div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e57373', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              Connection Lost
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#9c8e76', lineHeight: 1.5 }}>
+              Your opponent has left the game.
+            </div>
+            <button
+              onClick={handleDisconnectModalClose}
+              style={{
+                fontFamily: 'Cinzel, serif',
+                fontSize: 16,
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                padding: '14px 24px',
+                background: 'rgba(139,0,0,0.2)',
+                border: '1px solid rgba(139,0,0,0.5)',
+                borderRadius: 6,
+                color: '#f0e2c0',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139,0,0,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139,0,0,0.2)'; }}
+            >
+              Return to Menu
+            </button>
+          </div>
         </div>
       )}
       {screen === 'menu' && (
