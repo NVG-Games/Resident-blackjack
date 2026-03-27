@@ -355,8 +355,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const activeTrumpDisabled = showBotControls ? false : isActionDisabled;
 
   return (
-    <div ref={tableRef} className="relative w-full h-full flex flex-col"
-      style={{ fontFamily: 'Cinzel, serif' }}>
+    <div ref={tableRef} className="relative w-full flex flex-col"
+      style={{ flex: 1, minHeight: 0, fontFamily: 'Cinzel, serif' }}>
 
       {/* Background: noir black */}
       <div className="absolute inset-0"
@@ -514,7 +514,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </section>
 
         {/* ACTION BUTTONS — in flow, at the bottom of flex column */}
-        <div className="flex-none z-30 mt-auto" style={{ background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="flex-none z-30 mt-auto" style={{ background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '0 12px max(12px, env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Top info row — fixed height 64px, always occupies space */}
         {(() => {
           if (turnSecondsLeft !== null) {

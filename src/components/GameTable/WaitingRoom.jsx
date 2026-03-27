@@ -59,8 +59,16 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{ background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)' }}
+      className="flex items-center justify-center p-4"
+      style={{
+        flex: 1,
+        minHeight: 0,
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
+        paddingTop: 'max(16px, env(safe-area-inset-top))',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom))',
+      }}
     >
       <div ref={containerRef} className="w-full max-w-sm text-center" style={panelStyle}>
         <div style={{ padding: '20px 24px 20px', display: 'flex', flexDirection: 'column', gap: 16, alignItems: 'center' }}>

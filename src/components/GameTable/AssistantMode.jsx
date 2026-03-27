@@ -116,10 +116,10 @@ export default function AssistantMode({ onBack }) {
   const draws = history.filter(r => r.winner === 'draw').length;
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#080604', fontFamily: 'Cinzel, serif', color: '#e8d5b0' }}>
+    <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', background: '#080604', fontFamily: 'Cinzel, serif', color: '#e8d5b0' }}>
 
       {/* ── TOP BAR ── */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 20px', borderBottom: '1px solid rgba(255,209,82,0.15)', background: 'rgba(0,0,0,0.6)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'max(8px, env(safe-area-inset-top)) 20px 8px', borderBottom: '1px solid rgba(255,209,82,0.15)', background: 'rgba(0,0,0,0.6)' }}>
         <button onClick={onBack} style={{ fontSize: 18, color: '#e8d5b0', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Cinzel, serif' }}>
           ← Menu
         </button>

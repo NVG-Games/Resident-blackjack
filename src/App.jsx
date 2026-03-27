@@ -122,15 +122,13 @@ export default function App() {
 
   return (
     <div
-      className="grain w-screen overflow-hidden"
+      className="grain w-screen"
       style={{
         background: '#0d0805',
         height: '100dvh',
-        boxSizing: 'border-box',
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
+        overflow: 'clip',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Disconnect notification */}

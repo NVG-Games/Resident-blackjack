@@ -19,7 +19,7 @@
     height: 100%;
     /* Use dvh for mobile browsers with dynamic toolbars */
     height: 100dvh;
-    overflow: hidden;
+    overflow: clip;
     background: #080604;
   }
 
