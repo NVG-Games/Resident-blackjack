@@ -20,6 +20,7 @@ import HandoffScreen from './HandoffScreen.jsx';
 
 const BOT_THINK_DELAY_MS = 800;
 const BOT_FAST_DELAY_MS = 350;
+const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 
 // playerRole: 'clancy' = you are Clancy (player), Hoffman is bot
 //             'hoffman' = you are Hoffman (bot slot), Clancy is opponent
@@ -75,9 +76,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   // hot-seat: player 2 has confirmed handoff and is now acting
   const [hotSeatBotActive, setHotSeatBotActive] = useState(false);
 
-  const botTimerRef = useRef(null);
   const tableRef = useRef(null);
-  const botProcessingRef = useRef(false);
   const stateRef = useRef(state);
 
   // LLM bot — always call the hook (hooks can't be conditional), decide is a stable ref
@@ -177,51 +176,61 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   }, [state.roundState, state.botStood, isHotSeat]);
 
   // AI Bot / LLM Bot logic — disabled in hot-seat and online modes
+  //
+  // Design: the effect triggers on roundState change only. Inside, it runs a self-contained
+  // async loop using stateRef (always current). After each BOT_ACTION dispatch the reducer
+  // either keeps roundState=BOT_TURN (hit) or flips to PLAYER_TURN (stand/bust).
+  // When roundState flips back to BOT_TURN next round, the effect re-runs.
+  // A cancelledRef prevents stale closures from dispatching after unmount or round change.
   useEffect(() => {
     if (isHotSeat || isOnline) return;
-    if (state.roundState !== ROUND_STATE.BOT_TURN) {
-      botProcessingRef.current = false;
-      return;
-    }
+    if (state.roundState !== ROUND_STATE.BOT_TURN) return;
     if (state.gameOver) return;
-    if (botProcessingRef.current) return;
 
-    botProcessingRef.current = true;
-    clearTimeout(botTimerRef.current);
+    let cancelled = false;
 
-    if (state.botStood) {
-      botTimerRef.current = setTimeout(() => {
-        botProcessingRef.current = false;
-        dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
-      }, 150);
-      return () => clearTimeout(botTimerRef.current);
+    async function runBotLoop() {
+      // Loop: keep taking actions while it's BOT_TURN and not cancelled
+      while (!cancelled) {
+        const s = stateRef.current;
+        if (s.roundState !== ROUND_STATE.BOT_TURN || s.gameOver) break;
+
+        if (s.botStood) {
+          await wait(150);
+          if (cancelled) break;
+          dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
+          break;
+        }
+
+        setIsThinking(true);
+
+        if (isLlm) {
+          const decision = await llmDecideRef.current(s);
+          if (cancelled) break;
+          setIsThinking(false);
+          if (!decision) break;
+          if (decision.reasoning) setLlmReasoning(decision.reasoning);
+          dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
+          // After dispatch stateRef will update on next render; wait a tick
+          await wait(50);
+        } else {
+          const delay = BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
+          await wait(delay);
+          if (cancelled) break;
+          setIsThinking(false);
+          const decision = getBotDecision(stateRef.current);
+          dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
+          // Small pause so React re-renders and stateRef gets updated before next loop iter
+          await wait(50);
+        }
+      }
+      if (!cancelled) setIsThinking(false);
     }
 
-    setIsThinking(true);
-
-    // ── LLM mode: call MCP server async ──────────────────────────────────────
-    if (isLlm) {
-      llmDecideRef.current(stateRef.current).then((decision) => {
-        setIsThinking(false);
-        botProcessingRef.current = false;
-        if (!decision) return; // aborted request — another is in flight
-        if (decision.reasoning) setLlmReasoning(decision.reasoning);
-        dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
-      });
-      return;
-    }
-
-    // ── Classic AI mode ───────────────────────────────────────────────────────
-    const delay = BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
-    botTimerRef.current = setTimeout(() => {
-      setIsThinking(false);
-      botProcessingRef.current = false;
-      const decision = getBotDecision(stateRef.current);
-      dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
-    }, delay);
-
-    return () => clearTimeout(botTimerRef.current);
-  }, [state.roundState, state.botHand.length, state.botTrumpHand.length, state.gameOver, isHotSeat, isLlm]);
+    runBotLoop();
+    return () => { cancelled = true; setIsThinking(false); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.roundState, state.gameOver, isHotSeat, isOnline, isLlm]);
 
   stateRef.current = state;
 
@@ -351,6 +360,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
             isThinking={isThinking && !isHotSeat && !isOnline}
             playerName={(isHotSeat || isOnline) ? player2Name : 'Hoffman'}
             hideCards={isHotSeat && !showBotControls && !showRoundResult}
+            hideHoleCard={!isHotSeat && !isOnline}
           />
           {/* LLM reasoning bubble — shown when Claude explains its move */}
           {isLlm && llmReasoning && !isThinking && (

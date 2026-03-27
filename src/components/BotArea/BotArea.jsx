@@ -3,17 +3,18 @@ import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
 
-export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false }) {
+// hideHoleCard: in AI mode bot's first card is hidden from player; in hot-seat/online all cards visible to owner
+export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false, hideHoleCard = false }) {
   const { botHand, playerTableTrumps, botTableTrumps, botHealth, botStood, roundState } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
   const isRoundOver = roundState === ROUND_STATE.ROUND_OVER;
-  const faceUpCards = botHand.slice(1);
   const faceDownCard = botHand[0];
-  const showFaceDown = isRoundOver && faceDownCard;
-  const total = isRoundOver ? getHandTotal(botHand) : getHandTotal(faceUpCards);
-  const faceUpTotal = getHandTotal(faceUpCards);
-  const isBust = (isRoundOver ? total : faceUpTotal) > target;
+  // Hole card is hidden only when hideHoleCard=true (AI mode) AND round is not over
+  const showFaceDown = !hideHoleCard || isRoundOver;
+  const total = getHandTotal(botHand);
+  const faceUpCards = botHand.slice(1);
+  const isBust = total > target;
 
   return (
     <div className="flex flex-col items-center gap-1 sm:gap-3">
@@ -53,14 +54,14 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
             </div>
           </div>
         )}
-        {faceUpCards.map((card) => (
-          <Card key={card.id} card={card} faceDown={false} isNew={true} />
+        {faceUpCards.map((card, idx) => (
+          <Card key={card.id} card={card} faceDown={false} isNew={true} dealIndex={idx} />
         ))}
         {botHand.length > 0 && (
           <div className="ml-1 sm:ml-2 flex flex-col items-center justify-center">
             <div className={`font-cinzel text-xl sm:text-2xl font-bold ${isBust ? 'text-red-600' : 'text-amber-300'}`}>
-              {isRoundOver ? total : faceUpTotal}
-              {!isRoundOver && faceUpTotal > 0 && (
+              {showFaceDown ? total : getHandTotal(faceUpCards)}
+              {!showFaceDown && getHandTotal(faceUpCards) > 0 && (
                 <span className="text-xs text-stone-400 ml-1">+?</span>
               )}
             </div>

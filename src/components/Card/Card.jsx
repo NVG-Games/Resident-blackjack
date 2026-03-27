@@ -109,6 +109,7 @@ export default function Card({
   card,
   faceDown = false,
   isNew = false,
+  dealIndex = 0, // used to re-trigger enter animation when a new card at this slot appears
   animateFrom = null, // { x, y } for deal animation
   className = '',
   onClick,
@@ -117,21 +118,24 @@ export default function Card({
   const cardRef = useRef(null);
   const innerRef = useRef(null);
 
+  // Run enter animation on mount (card is new to the DOM) or when dealIndex changes
+  // We use card.id as a stable dep — when a new card replaces a slot, card.id changes → re-runs
   useEffect(() => {
-    if (!cardRef.current) return;
+    if (!cardRef.current || !isNew) return;
 
-    if (isNew && animateFrom) {
+    if (animateFrom) {
       gsap.fromTo(cardRef.current,
         { x: animateFrom.x, y: animateFrom.y, opacity: 0, scale: 0.6 },
         { x: 0, y: 0, opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(1.4)' }
       );
-    } else if (isNew) {
+    } else {
       gsap.fromTo(cardRef.current,
         { y: -60, opacity: 0, scale: 0.7, rotation: -5 },
         { y: 0, opacity: 1, scale: 1, rotation: 0, duration: 0.4, ease: 'back.out(1.2)' }
       );
     }
-  }, [isNew, animateFrom]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [card?.id, isNew, animateFrom]);
 
   // Flip animation when faceDown changes to false
   const prevFaceDown = useRef(faceDown);
