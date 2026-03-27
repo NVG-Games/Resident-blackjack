@@ -22,7 +22,7 @@ const btnBase =
  *   onJoinReady({ code, seed, isHost }) — guest waiting room ready
  *   initialJoinCode?                    — pre-fill join code (from deep-link)
  */
-export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJoinCode }) {
+export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJoinCode, fastPlay }) {
   const containerRef = useRef(null);
   const { rooms, loading, error, announce, remove, refresh } = useLobby();
   const { peerId, peerStatus, connStatus, initPeer, connectToPeer, send, onData, onOpen } = usePeerContext();
@@ -32,6 +32,8 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
   const [hostCode, setHostCode] = useState(null);
   const [hostSeed, setHostSeed] = useState(null);
   const [joinStatus, setJoinStatus] = useState(null);
+  const [fastPlayStatus, setFastPlayStatus] = useState(fastPlay ? 'searching' : null); // 'searching' | 'joining' | 'hosting' | null
+  const fastPlayDoneRef = useRef(false);
 
   // Entrance animation
   useEffect(() => {
@@ -53,6 +55,26 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialJoinCode, loading, rooms]);
+
+  // Fast Play: auto-join first open room, or become host if none
+  useEffect(() => {
+    if (!fastPlay) return;
+    if (fastPlayDoneRef.current) return;
+    if (loading) return; // still fetching rooms
+
+    fastPlayDoneRef.current = true;
+
+    if (rooms.length > 0) {
+      // Join the first available room
+      setFastPlayStatus('joining');
+      handleJoinRoom(rooms[0]);
+    } else {
+      // No rooms — become host automatically
+      setFastPlayStatus('hosting');
+      handleHostGame();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fastPlay, loading, rooms]);
 
   // Host: when a guest opens the connection, send GAME_INFO and move to waiting room
   useEffect(() => {
@@ -140,6 +162,67 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
   const displayName = tgUser
     ? `${tgUser.first_name}${tgUser.username ? ` @${tgUser.username}` : ''}`
     : null;
+
+  // Fast Play overlay screen
+  if (fastPlay && fastPlayStatus !== null) {
+    const isJoining = fastPlayStatus === 'joining';
+    const isHostingFP = fastPlayStatus === 'hosting';
+    return (
+      <div
+        ref={containerRef}
+        style={{
+          minHeight: '100dvh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
+          gap: 32,
+          padding: '32px 24px',
+        }}
+      >
+        {/* Pulsing icon */}
+        <div style={{ fontSize: 64, lineHeight: 1, animation: 'fp-pulse 1.4s ease-in-out infinite' }}>⚡</div>
+        <style>{`@keyframes fp-pulse { 0%,100%{opacity:0.5;transform:scale(0.9)} 50%{opacity:1;transform:scale(1.05)} }`}</style>
+
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 28, fontWeight: 700, color: '#ffd152', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+            {isJoining && 'Joining Game…'}
+            {isHostingFP && 'Waiting for Opponent…'}
+            {fastPlayStatus === 'searching' && 'Searching…'}
+          </div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#7a6a50' }}>
+            {isJoining && 'Connecting to an open room'}
+            {isHostingFP && (
+              <>
+                No open rooms found — you are now the host
+                {hostCode && (
+                  <div style={{ marginTop: 16, fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                    Room: <span style={{ color: '#ffd152', fontSize: 22, fontWeight: 700 }}>{hostCode}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
+        {error && (
+          <div style={{ fontFamily: 'Cinzel, serif', color: '#e57373', fontSize: 15, textAlign: 'center', padding: '10px 16px', border: '1px solid rgba(229,115,115,0.3)', borderRadius: 4 }}>
+            {error}
+          </div>
+        )}
+
+        <button
+          style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#5a5040', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline', marginTop: 8 }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = '#e57373'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = '#5a5040'; }}
+          onClick={() => { if (hostCode) remove(hostCode); onBack(); }}
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div

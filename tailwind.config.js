@@ -7,9 +7,9 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        gothic: ['IM Fell English', 'Cinzel', 'serif'],
+        gothic: ['Cinzel', 'serif'],
         cinzel: ['Cinzel', 'serif'],
-        fell: ['IM Fell English', 'serif'],
+        fell: ['Cinzel', 'serif'],
       },
       colors: {
         blood: {

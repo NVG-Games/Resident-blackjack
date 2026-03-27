@@ -88,6 +88,9 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   // Track the last LLM reasoning string for display
   const [llmReasoning, setLlmReasoning] = useState(null);
 
+  // Exit to menu confirmation
+  const [showExitConfirm, setShowExitConfirm] = useState(false);
+
 
   const shakeTable = useCallback(() => {
     if (!tableRef.current) return;
@@ -339,7 +342,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   return (
     <div ref={tableRef} className="relative w-full h-full flex flex-col"
-      style={{ fontFamily: 'IM Fell English, serif' }}>
+      style={{ fontFamily: 'Cinzel, serif' }}>
 
       {/* Background: noir black */}
       <div className="absolute inset-0"
@@ -362,6 +365,97 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       <div className="absolute inset-y-0 right-0 w-px pointer-events-none z-10"
         style={{ background: 'linear-gradient(180deg, transparent, rgba(255,209,82,0.15) 20%, rgba(255,209,82,0.15) 80%, transparent)' }}
       />
+
+      {/* Exit button — top-left corner */}
+      <button
+        onClick={() => setShowExitConfirm(true)}
+        style={{
+          position: 'absolute',
+          top: 'calc(8px + env(safe-area-inset-top))',
+          left: 12,
+          zIndex: 40,
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '6px 8px',
+          fontFamily: 'Cinzel, serif',
+          fontSize: 13,
+          color: 'rgba(122,106,80,0.6)',
+          letterSpacing: '0.05em',
+          lineHeight: 1,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 5,
+        }}
+        onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(232,213,176,0.9)'; }}
+        onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(122,106,80,0.6)'; }}
+      >
+        ← Menu
+      </button>
+
+      {/* Exit confirmation modal */}
+      {showExitConfirm && (
+        <div
+          style={{
+            position: 'absolute', inset: 0, zIndex: 100,
+            background: 'rgba(0,0,0,0.85)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 24,
+          }}
+          onClick={() => setShowExitConfirm(false)}
+        >
+          <div
+            style={{
+              background: 'linear-gradient(160deg, #141008 0%, #0e0b06 100%)',
+              border: '1px solid rgba(255,209,82,0.25)',
+              borderRadius: 10,
+              padding: '40px 32px',
+              maxWidth: 420,
+              width: '100%',
+              textAlign: 'center',
+              boxShadow: '0 0 80px rgba(0,0,0,0.95)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 28, color: '#e8d5b0', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 12 }}>
+              Leave Game?
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 17, color: '#7a6a50', marginBottom: 36 }}>
+              Your progress will be lost.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button
+                onClick={onReturnToMenu}
+                style={{
+                  fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700,
+                  letterSpacing: '0.1em', textTransform: 'uppercase',
+                  color: '#e57373', background: 'rgba(229,115,115,0.08)',
+                  border: '1px solid rgba(229,115,115,0.4)', borderRadius: 5,
+                  padding: '18px 24px', cursor: 'pointer', width: '100%',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(229,115,115,0.18)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(229,115,115,0.08)'; }}
+              >
+                Leave
+              </button>
+              <button
+                onClick={() => setShowExitConfirm(false)}
+                style={{
+                  fontFamily: 'Cinzel, serif', fontSize: 17,
+                  letterSpacing: '0.08em', textTransform: 'uppercase',
+                  color: '#5a5040', background: 'none',
+                  border: '1px solid rgba(255,209,82,0.12)', borderRadius: 5,
+                  padding: '16px 24px', cursor: 'pointer', width: '100%',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#7a6a50'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#5a5040'; }}
+              >
+                Continue Playing
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main game layout — single column, fills viewport */}
       <div className="relative z-20 flex flex-col h-full px-3 sm:px-6 gap-2 sm:gap-3" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
