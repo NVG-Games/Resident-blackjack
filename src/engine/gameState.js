@@ -153,23 +153,12 @@ export function gameReducer(state, action) {
       const target = getEffectiveTarget([...state.playerTableTrumps, ...state.botTableTrumps]);
       const log = [...state.log, { msg: `You draw ${card.value}. Total: ${total}.`, time: Date.now() }];
 
-      if (total >= target) {
-        // Auto-stand or bust
-        return {
-          ...state,
-          playerHand: newHand,
-          deck: remaining,
-          playerStood: true,
-          roundState: ROUND_STATE.BOT_TURN,
-          log,
-        };
-      }
-
       return {
         ...state,
         playerHand: newHand,
         deck: remaining,
         roundState: ROUND_STATE.BOT_TURN,
+        botStood: false, // P1 hit resets P2's stand — P2 must decide again
         log,
       };
     }
@@ -179,7 +168,7 @@ export function gameReducer(state, action) {
       return {
         ...state,
         playerStood: true,
-        roundState: ROUND_STATE.BOT_TURN,
+        roundState: state.botStood ? ROUND_STATE.PLAYER_TURN : ROUND_STATE.BOT_TURN,
         log: [...state.log, { msg: 'You stand.', time: Date.now() }],
       };
     }
@@ -225,10 +214,10 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.BOT_ACTION: {
-      // Bot's action comes in via action.payload from AI
       const { type: botAction, trump } = action.payload;
-      // If player already stood, bot keeps control (stay in BOT_TURN for further bot actions)
-      const nextTurn = state.playerStood ? ROUND_STATE.BOT_TURN : ROUND_STATE.PLAYER_TURN;
+      // Always pass turn to PLAYER_TURN after bot action — hot-seat needs turn transfer every action.
+      // In AI mode the bot useEffect will re-fire on BOT_TURN if it wants another card.
+      const nextTurn = ROUND_STATE.PLAYER_TURN;
 
       if (botAction === 'stand') {
         return {
@@ -257,22 +246,13 @@ export function gameReducer(state, action) {
         const target = getEffectiveTarget([...state.playerTableTrumps, ...state.botTableTrumps]);
         const log = [...state.log, { msg: `Hoffman draws. His total approaches...`, time: Date.now() }];
 
-        if (total >= target) {
-          return {
-            ...state,
-            botHand: newHand,
-            deck: remaining,
-            botStood: true,
-            roundState: ROUND_STATE.PLAYER_TURN,
-            log,
-          };
-        }
-
+        // No auto-stand on bust — bot (human in hot-seat) must press STAND themselves.
         return {
           ...state,
           botHand: newHand,
           deck: remaining,
-          roundState: nextTurn, // stay in BOT_TURN if player already stood
+          roundState: nextTurn,
+          playerStood: false, // P2 hit resets P1's stand — P1 must decide again
           log,
         };
       }
@@ -391,6 +371,8 @@ export function gameReducer(state, action) {
           ...state,
           phase: nextPhase,
           roundNumber: 0,
+          playerStood: false,
+          botStood: false,
           overlay: {
             type: 'phase',
             phase: nextPhase,

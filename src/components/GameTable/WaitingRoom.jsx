@@ -3,9 +3,9 @@ import { gsap } from 'gsap';
 import { useTelegram } from '../../hooks/useTelegram.js';
 
 const panelStyle = {
-  background: 'linear-gradient(160deg, #0d0603 0%, #1a0c07 60%, #0a0402 100%)',
-  border: '1px solid #5c2a0e',
-  boxShadow: '0 0 40px rgba(180,30,0,0.15), inset 0 0 60px rgba(0,0,0,0.6)',
+  background: 'linear-gradient(160deg, #0e0c09 0%, #120f0a 60%, #080604 100%)',
+  border: '1px solid rgba(255,209,82,0.12)',
+  boxShadow: '0 0 60px rgba(0,0,0,0.9), inset 0 0 60px rgba(0,0,0,0.4)',
 };
 
 /**
@@ -60,91 +60,86 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        background: 'radial-gradient(ellipse at 50% 30%, #1a0a04 0%, #080402 100%)',
-        fontFamily: "'IM Fell English', serif",
-      }}
+      style={{ background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)' }}
     >
-      <div ref={containerRef} className="w-full max-w-md text-center" style={panelStyle}>
-        <div className="px-8 pt-10 pb-8 space-y-6">
-          {/* Room badge */}
+      <div ref={containerRef} className="w-full max-w-sm text-center" style={panelStyle}>
+        <div style={{ padding: '40px 32px 32px', display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}>
+
+          {/* Room code */}
           <div>
-            <p className="text-stone-500 text-xs font-cinzel uppercase tracking-widest mb-1">
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
               Room Code
             </p>
-            <p
-              className="font-cinzel text-5xl font-bold tracking-[0.3em]"
-              style={{ color: '#e74c3c', textShadow: '0 0 20px rgba(231,76,60,0.5)' }}
-            >
+            <p style={{ fontFamily: 'Cinzel, serif', fontSize: 48, fontWeight: 700, letterSpacing: '0.3em', color: '#ffd152' }}>
               {code}
             </p>
           </div>
 
           {/* Role badge */}
-          <div
-            className="inline-block px-4 py-2 rounded"
-            style={{ background: 'rgba(180,120,0,0.1)', border: '1px solid rgba(180,120,0,0.2)' }}
-          >
-            <span className="font-cinzel text-sm text-amber-300 tracking-widest uppercase">
-              {isHost ? '⚡ Host — Clancy' : '🎮 Guest — Hoffman'}
+          <div style={{ padding: '6px 18px', borderRadius: 4, background: 'rgba(255,209,82,0.06)', border: '1px solid rgba(255,209,82,0.2)' }}>
+            <span style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#e8d5b0', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+              {isHost ? '⚡ Host' : '✦ Guest'}
             </span>
           </div>
 
-          {/* Invite friend button — only for host */}
+          {/* Invite button */}
           {isHost && (
             <button
               onClick={handleInvite}
-              className="w-full font-cinzel tracking-widest uppercase text-xs px-4 py-3 rounded border border-stone-700/60 text-stone-300 hover:text-amber-300 hover:border-amber-700/60 transition-all duration-200 cursor-pointer flex items-center justify-center gap-2"
-              style={{ background: 'rgba(255,255,255,0.03)' }}
+              style={{
+                width: '100%', fontFamily: 'Cinzel, serif', fontSize: 18, letterSpacing: '0.06em',
+                textTransform: 'uppercase', padding: '11px 24px', borderRadius: 4, cursor: 'pointer',
+                color: '#e8d5b0', background: 'transparent', border: '1px solid rgba(232,213,176,0.2)',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = 'rgba(232,213,176,0.5)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = 'rgba(232,213,176,0.2)'; }}
             >
-              {isTelegram ? (
-                <>✈ Invite Friend via Telegram</>
-              ) : copied ? (
-                <>✓ Link Copied!</>
-              ) : (
-                <>🔗 Copy Invite Link</>
-              )}
+              {isTelegram ? '✈ Invite via Telegram' : copied ? '✓ Link Copied!' : '🔗 Copy Invite Link'}
             </button>
           )}
 
           {/* Status */}
           {isHost && !opponentConnected && (
-            <div className="space-y-2">
-              <p className="text-stone-400 text-sm italic">
-                Waiting for opponent
-                <span ref={dotRef}>…</span>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#5a5040', fontStyle: 'italic' }}>
+                Waiting for opponent<span ref={dotRef}>…</span>
               </p>
-              <p className="text-stone-600 text-xs">Share the room code with your opponent</p>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#3a3020', marginTop: 4 }}>Share the room code</p>
             </div>
           )}
 
           {isHost && opponentConnected && (
-            <div className="space-y-4">
-              <p className="text-green-400 text-sm font-cinzel uppercase tracking-widest">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', alignItems: 'center' }}>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#a8c090', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
                 ✓ Opponent Connected
               </p>
               <button
-                className="w-full font-cinzel tracking-widest uppercase text-sm px-6 py-4 rounded border border-amber-700/50 text-amber-300 transition-all duration-200 cursor-pointer hover:bg-amber-900/20"
-                style={{ background: 'rgba(180,120,0,0.08)' }}
+                style={{
+                  width: '100%', fontFamily: 'Cinzel, serif', fontSize: 22, letterSpacing: '0.06em',
+                  textTransform: 'uppercase', padding: '14px 32px', borderRadius: 4, cursor: 'pointer',
+                  color: '#ffd152', background: 'rgba(255,209,82,0.06)', border: '1px solid rgba(255,209,82,0.4)',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; }}
                 onClick={onStart}
               >
-                ▶ Begin the Ordeal
+                ▶ Start Game
               </button>
             </div>
           )}
 
           {!isHost && (
-            <div className="space-y-2">
-              <p className="text-stone-400 text-sm italic">
-                Waiting for host to start
-                <span ref={dotRef}>…</span>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#5a5040', fontStyle: 'italic' }}>
+                Waiting for host<span ref={dotRef}>…</span>
               </p>
-              <p className="text-stone-600 text-xs">Prepare yourself, Hoffman</p>
             </div>
           )}
 
           <button
-            className="text-stone-600 hover:text-stone-400 text-xs underline cursor-pointer transition-colors"
+            style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#3a3020', textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none', marginTop: 4 }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#5a5040'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#3a3020'; }}
             onClick={onBack}
           >
             Leave Room

@@ -161,13 +161,13 @@ export function getBotDecision(state) {
   // Already stood or at target
   if (state.botStood) return { type: 'stand' };
 
-  // Return card if busted — use trump
+  // Return card if busted — use trump first
   if (botTotal > target && state.botTrumpHand.some(t => t.type === TRUMP_TYPES.RETURN)) {
     const returnCard = state.botTrumpHand.find(t => t.type === TRUMP_TYPES.RETURN);
     return { type: 'trump', trump: returnCard };
   }
 
-  // If already busted with no return, stand (lose gracefully)
+  // If busted: stand — more cards only increase total further from target
   if (botTotal > target) return { type: 'stand' };
 
   // Consider playing a trump first
@@ -186,26 +186,45 @@ export function getBotDecision(state) {
     if (trump) return { type: 'trump', trump };
   }
 
-  // Aggressiveness thresholds by phase
+  // Core decision: compare our position vs estimated player position
+  const weAreAhead = botTotal > estimatedPlayerTotal;
+  const weAreBehind = botTotal < estimatedPlayerTotal - 2;
+
+  // Aggressiveness thresholds by phase — higher in later phases
   const standThresholds = {
     [PHASES.FINGER]: 16,
     [PHASES.SHOCK]: 17,
     [PHASES.SAW]: 18,
   };
-
   const threshold = standThresholds[phase] || 17;
 
-  // Stand if total is high enough or bust risk too great
+  // If we're ahead and bust risk is low — stand and protect the lead
+  if (weAreAhead && bustChance > 0.45 && botTotal >= threshold) {
+    const trump = chooseTrump(state);
+    if (trump && [TRUMP_TYPES.ONE_UP, TRUMP_TYPES.TWO_UP, TRUMP_TYPES.MIND_SHIFT, TRUMP_TYPES.MIND_SHIFT_PLUS].includes(trump.type)) {
+      return { type: 'trump', trump };
+    }
+    return { type: 'stand' };
+  }
+
+  // If we're behind and player seems safe — take risks, hit even with moderate bust chance
+  if (weAreBehind && bustChance < 0.65) {
+    return { type: 'hit' };
+  }
+
+  // If player is likely busted too — stand, we might win on proximity
+  if (estimatedPlayerTotal > target && botTotal <= target) {
+    return { type: 'stand' };
+  }
+
+  // Standard threshold logic
   if (botTotal >= threshold || bustChance > 0.7) {
-    // But maybe play an aggressive trump first
-    if (state.botTrumpHand.length > 0 && botTotal >= threshold) {
-      const trump = chooseTrump(state);
-      if (trump && [
-        TRUMP_TYPES.ONE_UP, TRUMP_TYPES.TWO_UP, TRUMP_TYPES.DESPERATION,
-        TRUMP_TYPES.MIND_SHIFT, TRUMP_TYPES.MIND_SHIFT_PLUS, TRUMP_TYPES.DESIRE,
-      ].includes(trump.type)) {
-        return { type: 'trump', trump };
-      }
+    const trump = chooseTrump(state);
+    if (trump && [
+      TRUMP_TYPES.ONE_UP, TRUMP_TYPES.TWO_UP, TRUMP_TYPES.DESPERATION,
+      TRUMP_TYPES.MIND_SHIFT, TRUMP_TYPES.MIND_SHIFT_PLUS,
+    ].includes(trump.type)) {
+      return { type: 'trump', trump };
     }
     return { type: 'stand' };
   }

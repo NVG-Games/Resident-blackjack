@@ -19,16 +19,14 @@ export default function TableTrumps({ playerTableTrumps, botTableTrumps }) {
 function TrumpSection({ label, trumps, side }) {
   return (
     <div className="flex flex-col items-center gap-1">
-      <span className={`text-xs font-cinzel uppercase tracking-widest ${
-        side === 'bot' ? 'text-red-500/70' : 'text-amber-500/70'
-      }`}>{label}</span>
+      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: side === 'bot' ? '#f87171' : '#fbbf24' }}>{label}</span>
       <div className="flex gap-1 flex-wrap justify-center">
         {trumps.map(trump => (
           <TrumpCard
             key={trump.id}
             trump={trump}
             isOnTable={true}
-            size="table"
+            size="mini"
           />
         ))}
       </div>

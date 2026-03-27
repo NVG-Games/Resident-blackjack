@@ -17,65 +17,48 @@ if (!document.head.querySelector('#card-anim-style')) {
   document.head.appendChild(DEAL_STYLE);
 }
 
-// SVG face for a number card
+// SVG face for a number card — noir ivory style
 function CardFace({ value }) {
-  const isRed = value % 3 === 0 || value === 7 || value === 11;
-  const color = isRed ? '#8b0000' : '#1a1008';
-  const accentColor = isRed ? '#cc2200' : '#2d1f0d';
-
   return (
     <svg viewBox="0 0 100 140" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
       <defs>
         <filter id={`shadow-${value}`}>
-          <feDropShadow dx="0" dy="1" stdDeviation="1" floodOpacity="0.3" />
+          <feDropShadow dx="0" dy="1" stdDeviation="0.8" floodOpacity="0.2" />
         </filter>
-        <pattern id={`grain-${value}`} patternUnits="userSpaceOnUse" width="4" height="4">
-          <path d="M0,0 L4,4 M0,4 L4,0" stroke="#00000010" strokeWidth="0.5" />
-        </pattern>
       </defs>
 
-      {/* Card background */}
-      <rect width="100" height="140" rx="6" ry="6" fill="#f0e2c0" />
-      <rect width="100" height="140" rx="6" ry="6" fill={`url(#grain-${value})`} />
+      {/* Card background — warm ivory */}
+      <rect width="100" height="140" rx="5" ry="5" fill="#f2ece0" />
 
-      {/* Border */}
-      <rect x="2" y="2" width="96" height="136" rx="5" ry="5"
-        fill="none" stroke={accentColor} strokeWidth="1.5" />
-      <rect x="4" y="4" width="92" height="132" rx="4" ry="4"
-        fill="none" stroke={accentColor} strokeWidth="0.5" opacity="0.5" />
-
-      {/* Corner decorations */}
-      <circle cx="8" cy="8" r="2" fill={accentColor} opacity="0.4" />
-      <circle cx="92" cy="8" r="2" fill={accentColor} opacity="0.4" />
-      <circle cx="8" cy="132" r="2" fill={accentColor} opacity="0.4" />
-      <circle cx="92" cy="132" r="2" fill={accentColor} opacity="0.4" />
+      {/* Outer border */}
+      <rect x="2.5" y="2.5" width="95" height="135" rx="4" ry="4"
+        fill="none" stroke="#1a1510" strokeWidth="1.2" />
+      {/* Inner border */}
+      <rect x="5" y="5" width="90" height="130" rx="3" ry="3"
+        fill="none" stroke="#1a1510" strokeWidth="0.4" opacity="0.3" />
 
       {/* Corner value - top left */}
-      <text x="10" y="22" fontFamily="Cinzel, serif" fontSize="14" fontWeight="700"
-        fill={color} textAnchor="middle">{value}</text>
+      <text x="12" y="22" fontFamily="Cinzel, serif" fontSize="15" fontWeight="700"
+        fill="#1a1510" textAnchor="middle">{value}</text>
 
       {/* Corner value - bottom right (rotated) */}
       <g transform="rotate(180 50 70)">
-        <text x="10" y="22" fontFamily="Cinzel, serif" fontSize="14" fontWeight="700"
-          fill={color} textAnchor="middle">{value}</text>
+        <text x="12" y="22" fontFamily="Cinzel, serif" fontSize="15" fontWeight="700"
+          fill="#1a1510" textAnchor="middle">{value}</text>
       </g>
 
       {/* Center value - large */}
-      <text x="50" y="82" fontFamily="Cinzel Decorative, Cinzel, serif"
-        fontSize="44" fontWeight="700"
-        fill={color}
+      <text x="50" y="84" fontFamily="Cinzel, serif"
+        fontSize="52" fontWeight="900"
+        fill="#1a1510"
         textAnchor="middle"
         dominantBaseline="middle"
         filter={`url(#shadow-${value})`}
       >{value}</text>
 
-      {/* Decorative lines */}
-      <line x1="15" y1="30" x2="85" y2="30" stroke={accentColor} strokeWidth="0.5" opacity="0.3" />
-      <line x1="15" y1="110" x2="85" y2="110" stroke={accentColor} strokeWidth="0.5" opacity="0.3" />
-
-      {/* Suit symbols (using card suit patterns) */}
-      <text x="50" y="115" fontFamily="serif" fontSize="8"
-        fill={accentColor} textAnchor="middle" opacity="0.6">✦  ✦  ✦</text>
+      {/* Thin decorative lines */}
+      <line x1="14" y1="30" x2="86" y2="30" stroke="#1a1510" strokeWidth="0.4" opacity="0.2" />
+      <line x1="14" y1="110" x2="86" y2="110" stroke="#1a1510" strokeWidth="0.4" opacity="0.2" />
     </svg>
   );
 }
@@ -84,38 +67,36 @@ function CardBack() {
   return (
     <svg viewBox="0 0 100 140" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <pattern id="crosshatch" patternUnits="userSpaceOnUse" width="10" height="10">
-          <path d="M0,0 L10,10 M0,10 L10,0" stroke="#3d0000" strokeWidth="0.8" />
+        <pattern id="noirDiag" patternUnits="userSpaceOnUse" width="8" height="8">
+          <path d="M0,0 L8,8 M0,8 L8,0" stroke="rgba(255,209,82,0.07)" strokeWidth="0.6" />
         </pattern>
-        <radialGradient id="backGrad" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#1a0000" />
-          <stop offset="100%" stopColor="#0d0000" />
-        </radialGradient>
+        <linearGradient id="backGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#1c1610" />
+          <stop offset="100%" stopColor="#0e0b07" />
+        </linearGradient>
       </defs>
 
-      <rect width="100" height="140" rx="6" ry="6" fill="url(#backGrad)" />
-      <rect x="5" y="5" width="90" height="130" rx="4" ry="4" fill="url(#crosshatch)" opacity="0.4" />
+      <rect width="100" height="140" rx="5" ry="5" fill="url(#backGrad)" />
+      <rect x="4" y="4" width="92" height="132" rx="4" ry="4" fill="url(#noirDiag)" />
 
-      {/* Ornate border */}
-      <rect x="3" y="3" width="94" height="134" rx="5" ry="5"
-        fill="none" stroke="#6b0000" strokeWidth="1.5" />
-      <rect x="6" y="6" width="88" height="128" rx="4" ry="4"
-        fill="none" stroke="#8b0000" strokeWidth="0.8" opacity="0.6" />
+      {/* Gold border */}
+      <rect x="2.5" y="2.5" width="95" height="135" rx="4" ry="4"
+        fill="none" stroke="rgba(255,209,82,0.3)" strokeWidth="1" />
+      <rect x="5" y="5" width="90" height="130" rx="3" ry="3"
+        fill="none" stroke="rgba(255,209,82,0.1)" strokeWidth="0.6" />
 
       {/* Center emblem */}
-      <circle cx="50" cy="70" r="20" fill="none" stroke="#8b0000" strokeWidth="1.5" />
-      <circle cx="50" cy="70" r="15" fill="none" stroke="#6b0000" strokeWidth="0.8" opacity="0.6" />
-
-      {/* Biohazard-ish symbol */}
-      <text x="50" y="78" fontFamily="serif" fontSize="22"
-        fill="#8b0000" textAnchor="middle">☣</text>
+      <circle cx="50" cy="70" r="18" fill="none" stroke="rgba(255,209,82,0.25)" strokeWidth="1" />
+      <circle cx="50" cy="70" r="12" fill="none" stroke="rgba(255,209,82,0.12)" strokeWidth="0.6" />
+      <text x="50" y="76" fontFamily="serif" fontSize="16"
+        fill="rgba(255,209,82,0.35)" textAnchor="middle">✦</text>
 
       {/* Corner marks */}
       <text x="12" y="18" fontFamily="Cinzel, serif" fontSize="9"
-        fill="#8b0000" textAnchor="middle">21</text>
+        fill="rgba(255,209,82,0.3)" textAnchor="middle">21</text>
       <g transform="rotate(180 50 70)">
         <text x="12" y="18" fontFamily="Cinzel, serif" fontSize="9"
-          fill="#8b0000" textAnchor="middle">21</text>
+          fill="rgba(255,209,82,0.3)" textAnchor="middle">21</text>
       </g>
     </svg>
   );
@@ -176,8 +157,8 @@ export default function Card({
       onClick={onClick}
       className={`relative cursor-pointer select-none ${isNew ? 'card-deal-in' : ''} ${className}`}
       style={{
-        width: 'clamp(52px, 12vw, 80px)',
-        height: 'clamp(73px, 17vw, 112px)',
+        width: 'clamp(80px, 22vw, 110px)',
+        height: 'clamp(112px, 31vw, 154px)',
         perspective: '600px',
         transformStyle: 'preserve-3d',
       }}

@@ -6,13 +6,13 @@ import { useTelegram } from '../../hooks/useTelegram.js';
 import { generateSeed } from '../../engine/deck.js';
 
 const panelStyle = {
-  background: 'linear-gradient(160deg, #0d0603 0%, #1a0c07 60%, #0a0402 100%)',
-  border: '1px solid #5c2a0e',
-  boxShadow: '0 0 40px rgba(180,30,0,0.15), inset 0 0 60px rgba(0,0,0,0.6)',
+  background: 'linear-gradient(160deg, #141008 0%, #0e0b06 60%, #080604 100%)',
+  border: '1px solid rgba(255,209,82,0.18)',
+  boxShadow: '0 0 80px rgba(0,0,0,0.95), 0 0 0 1px rgba(255,209,82,0.04)',
 };
 
 const btnBase =
-  'font-cinzel tracking-widest uppercase text-sm px-6 py-3 rounded transition-all duration-200 cursor-pointer select-none';
+  'font-cinzel uppercase rounded transition-all duration-200 cursor-pointer select-none';
 
 /**
  * LobbyScreen — online multiplayer lobby.
@@ -60,6 +60,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
     const unsub = onOpen(() => {
       // Send game info to guest so they know the room code and seed
       send({ type: 'GAME_INFO', code: hostCode, seed: hostSeed });
+      remove(hostCode); // clean up lobby — game is starting
       onHostReady({ code: hostCode, seed: hostSeed, isHost: true });
     });
     return unsub;
@@ -143,141 +144,158 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
   return (
     <div
       ref={containerRef}
-      className="min-h-screen flex items-center justify-center p-4"
       style={{
-        background: 'radial-gradient(ellipse at 50% 30%, #1a0a04 0%, #080402 100%)',
-        fontFamily: "'IM Fell English', serif",
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
+        overflowY: 'auto',
       }}
     >
-      <div className="w-full max-w-2xl" style={panelStyle}>
+      {/* Desktop: two-column layout wrapper */}
+      <div style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        width: '100%',
+        maxWidth: 900,
+        margin: '0 auto',
+        padding: '0 16px',
+        boxSizing: 'border-box',
+      }}>
         {/* Header */}
-        <div className="px-8 pt-8 pb-4 border-b border-red-900/30">
-          <h1
-            className="font-cinzel text-3xl font-bold text-center tracking-widest uppercase"
-            style={{ color: '#c0392b', textShadow: '0 0 20px rgba(192,57,43,0.5)' }}
+        <div style={{ padding: '24px 8px 20px', borderBottom: '1px solid rgba(255,209,82,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <button
+            className={btnBase}
+            style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#7a6a50', background: 'none', border: 'none', cursor: 'pointer', padding: '6px 0' }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = '#e8d5b0'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = '#7a6a50'; }}
+            onClick={onBack}
           >
-            ⚔ Online Multiplayer
+            ← Menu
+          </button>
+          <h1
+            className="font-cinzel font-bold uppercase"
+            style={{ color: '#e8d5b0', letterSpacing: '0.12em', fontSize: 26, margin: 0 }}
+          >
+            Multiplayer
           </h1>
-          <p className="text-stone-500 text-center text-sm mt-1 italic">
-            Play against another survivor over the internet
-          </p>
-          {/* Telegram user badge */}
-          {displayName && (
-            <div className="flex items-center justify-center gap-2 mt-3">
-              <span className="text-base">✈</span>
-              <span className="font-cinzel text-xs text-amber-400 tracking-widest">
+          <div style={{ width: 60 }}>
+            {displayName && (
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#7a6a50', textAlign: 'right', display: 'block' }}>
                 {displayName}
               </span>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
-        <div className="p-8 space-y-6">
-          {/* Host controls */}
-          {!isHosting ? (
-            <button
-              className={`${btnBase} w-full text-amber-300 border border-amber-700/50 hover:bg-amber-900/20`}
-              style={{ background: 'rgba(180,120,0,0.08)' }}
-              onClick={handleHostGame}
-              disabled={joinStatus === 'connecting'}
-            >
-              ⚡ Host a Game
-            </button>
-          ) : (
-            <div
-              className="rounded p-4 text-center"
-              style={{ background: 'rgba(180,30,0,0.1)', border: '1px solid #5c1a0e' }}
-            >
-              <p className="text-stone-400 text-sm mb-1 font-cinzel">Your Room Code</p>
-              <p
-                className="font-cinzel text-4xl font-bold tracking-[0.3em]"
-                style={{ color: '#e74c3c', textShadow: '0 0 15px rgba(231,76,60,0.5)' }}
-              >
-                {hostCode}
-              </p>
-              <p className="text-stone-500 text-xs mt-2 italic">
-                {peerStatus === 'registering' && 'Registering with server…'}
-                {peerStatus === 'ready' && connStatus !== 'connected' && 'Waiting for opponent…'}
-                {connStatus === 'connecting' && 'Opponent is connecting…'}
-                {connStatus === 'connected' && 'Opponent connected!'}
-              </p>
-              <p className="text-stone-700 text-xs mt-1">
-                Peer ID: {peerId ?? '…'}
-              </p>
+        {/* Body — two columns on desktop, single column on mobile */}
+        <div style={{
+          flex: 1,
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: 24,
+          padding: '24px 8px',
+          alignItems: 'start',
+        }}>
+          {/* LEFT COLUMN: Host */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 4 }}>Create a room</div>
+            {!isHosting ? (
               <button
-                className="mt-3 text-stone-600 hover:text-stone-400 text-xs underline cursor-pointer"
-                onClick={handleCancelHost}
+                className={btnBase}
+                style={{
+                  width: '100%', fontSize: 20, padding: '18px 24px', letterSpacing: '0.05em',
+                  color: '#ffd152', background: 'rgba(255,209,82,0.06)',
+                  border: '1px solid rgba(255,209,82,0.45)', borderRadius: 6,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.7)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.45)'; }}
+                onClick={handleHostGame}
+                disabled={joinStatus === 'connecting'}
               >
-                Cancel
+                ⚡ Host a Game
               </button>
-            </div>
-          )}
+            ) : (
+              <div style={{ borderRadius: 6, padding: '20px 16px', textAlign: 'center', background: 'rgba(255,209,82,0.04)', border: '1px solid rgba(255,209,82,0.2)' }}>
+                <p style={{ fontFamily: 'Cinzel, serif', color: '#c4b9a8', fontSize: 13, marginBottom: 8, letterSpacing: '0.15em', textTransform: 'uppercase' }}>Your Room Code</p>
+                <p style={{ fontFamily: 'Cinzel, serif', fontSize: 48, fontWeight: 700, letterSpacing: '0.3em', color: '#ffd152', lineHeight: 1, wordBreak: 'break-all' }}>
+                  {hostCode}
+                </p>
+                <p style={{ fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 16, marginTop: 12, fontStyle: 'italic' }}>
+                  {peerStatus === 'registering' && 'Setting up…'}
+                  {peerStatus === 'ready' && connStatus !== 'connected' && 'Waiting for opponent…'}
+                  {connStatus === 'connecting' && 'Connecting…'}
+                  {connStatus === 'connected' && '✓ Opponent connected!'}
+                </p>
+                <button
+                  style={{ marginTop: 14, fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 15, textDecoration: 'underline', cursor: 'pointer', background: 'none', border: 'none' }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#e57373'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#7a6a50'}
+                  onClick={handleCancelHost}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
 
-          {/* Error banner */}
-          {error && (
-            <div className="text-red-400 text-xs font-cinzel text-center py-2 border border-red-900/30 rounded">
-              Lobby error: {error}
-            </div>
-          )}
+            {error && (
+              <div style={{ fontFamily: 'Cinzel, serif', color: '#e57373', fontSize: 15, textAlign: 'center', padding: '10px 12px', border: '1px solid rgba(229,115,115,0.3)', borderRadius: 4 }}>
+                {error}
+              </div>
+            )}
 
-          {/* Room list */}
-          <div>
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-cinzel text-sm font-bold text-stone-400 uppercase tracking-widest">
-                Open Rooms
-              </h2>
+            {/* Manual connect */}
+            <div style={{ marginTop: 8 }}>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10 }}>Join by code</div>
+              <ManualJoin
+                initialValue={initialJoinCode ?? ''}
+                onJoin={handleManualConnect}
+                disabled={isHosting}
+                status={joinStatus}
+              />
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Room list */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', textTransform: 'uppercase', letterSpacing: '0.12em' }}>Open Rooms</span>
               <button
-                className="text-stone-600 hover:text-red-400 text-xs font-cinzel uppercase tracking-wider cursor-pointer transition-colors"
+                style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#7a6a50', letterSpacing: '0.05em', cursor: 'pointer', background: 'none', border: 'none', padding: '4px 8px' }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = '#ffd152'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = '#7a6a50'; }}
                 onClick={refresh}
               >
                 ↻ Refresh
               </button>
             </div>
 
-            <div
-              className="rounded min-h-[120px]"
-              style={{ background: 'rgba(0,0,0,0.3)', border: '1px solid #3a1a08' }}
-            >
+            <div style={{ borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,209,82,0.08)', minHeight: 200, flex: 1 }}>
               {loading && (
-                <div className="flex items-center justify-center h-24 text-stone-600 text-sm italic">
-                  Scanning for rooms…
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 18, fontStyle: 'italic' }}>
+                  Scanning…
                 </div>
               )}
               {!loading && rooms.length === 0 && (
-                <div className="flex items-center justify-center h-24 text-stone-600 text-sm italic">
-                  No open rooms. Be the first to host.
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 18, fontStyle: 'italic' }}>
+                  No open rooms
                 </div>
               )}
-              {!loading &&
-                rooms.map((room) => (
-                  <RoomRow
-                    key={room.code}
-                    room={room}
-                    onJoin={() => handleJoinRoom(room)}
-                    disabled={isHosting || joinStatus === 'connecting'}
-                  />
-                ))}
+              {!loading && rooms.map((room) => (
+                <RoomRow
+                  key={room.code}
+                  room={room}
+                  onJoin={() => handleJoinRoom(room)}
+                  disabled={isHosting || joinStatus === 'connecting'}
+                />
+              ))}
             </div>
           </div>
-
-          {/* Manual peer ID connect */}
-          <ManualJoin
-            initialValue={initialJoinCode ?? ''}
-            onJoin={handleManualConnect}
-            disabled={isHosting}
-            status={joinStatus}
-          />
         </div>
 
-        {/* Footer */}
-        <div className="px-8 pb-6 flex justify-center border-t border-red-900/20 pt-4">
-          <button
-            className={`${btnBase} text-stone-500 hover:text-stone-300 text-xs`}
-            onClick={onBack}
-          >
-            ← Back to Menu
-          </button>
-        </div>
+        {/* Bottom padding */}
+        <div style={{ height: 24 }} />
       </div>
     </div>
   );
@@ -286,20 +304,21 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, initialJ
 function RoomRow({ room, onJoin, disabled }) {
   const hostLabel = room.host_name ?? room.hostName ?? 'Unknown';
   return (
-    <div className="flex items-center justify-between px-4 py-3 border-b border-red-900/10 last:border-b-0 hover:bg-red-900/5 transition-colors">
-      <div className="flex items-center gap-3">
-        <span className="text-lg">🎮</span>
-        <div>
-          <span className="font-cinzel text-amber-200 tracking-widest text-sm">{room.code}</span>
-          <span className="block text-stone-600 text-xs italic">{hostLabel}</span>
-        </div>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', borderBottom: '1px solid rgba(255,209,82,0.05)', gap: 10 }}>
+      <div style={{ minWidth: 0 }}>
+        <span style={{ fontFamily: 'Cinzel, serif', color: '#e8d5b0', fontSize: 22, letterSpacing: '0.15em', fontWeight: 700 }}>{room.code}</span>
+        {hostLabel && hostLabel !== 'Unknown' && (
+          <span style={{ display: 'block', fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 14, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{hostLabel}</span>
+        )}
       </div>
       <button
-        className={`${
-          disabled
-            ? 'text-stone-700 cursor-not-allowed'
-            : 'text-red-400 hover:text-red-200 cursor-pointer'
-        } font-cinzel text-xs uppercase tracking-widest border border-current rounded px-3 py-1 transition-colors`}
+        style={{
+          fontFamily: 'Cinzel, serif', fontSize: 16, letterSpacing: '0.06em', textTransform: 'uppercase',
+          color: disabled ? '#5a5040' : '#ffd152',
+          border: `1px solid ${disabled ? 'rgba(255,209,82,0.1)' : 'rgba(255,209,82,0.4)'}`,
+          borderRadius: 3, padding: '10px 18px', background: 'transparent',
+          cursor: disabled ? 'not-allowed' : 'pointer', flexShrink: 0,
+        }}
         onClick={onJoin}
         disabled={disabled}
       >
@@ -326,20 +345,28 @@ function ManualJoin({ onJoin, disabled, status, initialValue }) {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2 items-center">
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <input
         ref={inputRef}
         type="text"
-        placeholder="Enter Peer ID or Room Code manually…"
+        placeholder="Enter Room Code…"
         disabled={disabled || status === 'connecting'}
-        className="flex-1 bg-transparent border border-red-900/30 rounded px-3 py-2 text-stone-300 text-sm placeholder-stone-700 focus:outline-none focus:border-red-700/50 font-cinzel"
+        style={{
+          width: '100%', background: 'rgba(0,0,0,0.3)', fontFamily: 'Cinzel, serif', fontSize: 18,
+          border: '1px solid rgba(255,209,82,0.18)', borderRadius: 4, padding: '14px 16px',
+          color: '#e8d5b0', outline: 'none', letterSpacing: '0.05em', boxSizing: 'border-box',
+        }}
       />
       <button
         type="submit"
         disabled={disabled || status === 'connecting'}
-        className="font-cinzel tracking-widest uppercase text-xs px-4 py-2 rounded border border-red-900/40 text-red-300 hover:bg-red-900/20 transition-all cursor-pointer"
+        style={{
+          width: '100%', fontFamily: 'Cinzel, serif', fontSize: 18, letterSpacing: '0.08em', textTransform: 'uppercase',
+          padding: '14px', borderRadius: 4, cursor: 'pointer',
+          color: '#ffd152', background: 'rgba(255,209,82,0.06)', border: '1px solid rgba(255,209,82,0.35)',
+        }}
       >
-        {status === 'connecting' ? '…' : 'Connect'}
+        {status === 'connecting' ? 'Connecting…' : 'Connect by Code'}
       </button>
     </form>
   );

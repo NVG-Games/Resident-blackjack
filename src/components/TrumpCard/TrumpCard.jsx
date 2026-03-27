@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { gsap } from 'gsap';
 import { TRUMP_DEFINITIONS, PERMANENT_TRUMPS } from '../../engine/constants.js';
 import { TRUMP_IMAGES } from '../../engine/trumpImages.js';
@@ -14,6 +15,7 @@ export default function TrumpCard({
 }) {
   const cardRef = useRef(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const def = TRUMP_DEFINITIONS[trump.type] || {};
   const isPermanent = PERMANENT_TRUMPS.has(trump.type);
   const imgSrc = TRUMP_IMAGES[trump.type];
@@ -27,8 +29,21 @@ export default function TrumpCard({
     }
   }, [isNew]);
 
+  // Close confirm if card becomes disabled (turn ended)
+  useEffect(() => {
+    if (disabled) setShowConfirm(false);
+  }, [disabled]);
+
+
   const handleClick = () => {
     if (disabled || isOnTable) return;
+    setShowConfirm(true);
+    setShowTooltip(false);
+  };
+
+  const handleConfirmUse = (e) => {
+    e.stopPropagation();
+    setShowConfirm(false);
     if (cardRef.current) {
       gsap.timeline()
         .to(cardRef.current, { scale: 0.92, duration: 0.08 })
@@ -38,22 +53,29 @@ export default function TrumpCard({
     onClick?.(trump);
   };
 
+  const handleCancelUse = (e) => {
+    e.stopPropagation();
+    setShowConfirm(false);
+  };
+
   // Slightly larger on mobile via clamp — hand cards are tap targets
   const dims = {
-    hand:  { w: 'clamp(60px,16vw,72px)',  h: 'clamp(84px,22vw,100px)', nameSz: '8px'  },
-    table: { w: 'clamp(44px,12vw,56px)',  h: 'clamp(62px,17vw,78px)',  nameSz: '7px'  },
-    mini:  { w: 38,                        h: 52,                        nameSz: '6px'  },
-  }[size] || { w: 'clamp(60px,16vw,72px)', h: 'clamp(84px,22vw,100px)', nameSz: '8px' };
+    hand:  { w: 'clamp(88px,23vw,110px)',  h: 'clamp(122px,32vw,154px)', nameSz: '10px'  },
+    table: { w: 'clamp(58px,15vw,76px)',   h: 'clamp(80px,21vw,106px)',  nameSz: '9px'   },
+    mini:  { w: 48,                         h: 66,                         nameSz: '7px'   },
+  }[size] || { w: 'clamp(88px,23vw,110px)', h: 'clamp(122px,32vw,154px)', nameSz: '10px' };
 
   return (
     <div className={`relative select-none ${className}`} style={{ display: 'inline-block' }}>
       <div
         ref={cardRef}
+        role={(!disabled && !isOnTable) ? 'button' : undefined}
+        tabIndex={(!disabled && !isOnTable) ? 0 : undefined}
         onClick={handleClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        onTouchStart={() => setShowTooltip(true)}
-        onTouchEnd={() => setTimeout(() => setShowTooltip(false), 1500)}
+        onTouchStart={(e) => { e.stopPropagation(); setShowTooltip(true); }}
+        onTouchEnd={(e) => { e.stopPropagation(); setTimeout(() => setShowTooltip(false), 1500); }}
         className={`relative transition-all duration-150 rounded ${
           disabled
             ? 'opacity-40 cursor-not-allowed'
@@ -75,17 +97,17 @@ export default function TrumpCard({
             src={imgSrc}
             alt={def.name || trump.type}
             className="w-full h-full object-contain rounded"
-            style={{
-              imageRendering: 'auto',
-              background: 'linear-gradient(135deg, #1a0a04, #0a0502)',
-            }}
+          style={{
+            imageRendering: 'auto',
+            background: 'linear-gradient(135deg, #0e0c09, #080604)',
+          }}
             draggable={false}
           />
         ) : (
           /* Fallback SVG if no image */
           <div
             className="w-full h-full rounded flex flex-col items-center justify-center gap-1"
-            style={{ background: 'linear-gradient(135deg, #1a0a04, #0a0502)', border: '1px solid rgba(139,0,0,0.4)' }}
+            style={{ background: 'linear-gradient(135deg, #0e0c09, #080604)', border: '1px solid rgba(255,209,82,0.12)' }}
           >
             <span className="text-xl">{def.icon || '?'}</span>
             <span className="font-cinzel text-center text-stone-300 leading-tight px-1"
@@ -112,26 +134,99 @@ export default function TrumpCard({
         )}
       </div>
 
-      {/* Tooltip */}
-      {showTooltip && (
+      {/* Tooltip — desktop hover only, hidden when confirm is showing */}
+      {showTooltip && !showConfirm && !disabled && !isOnTable && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none"
           style={{ width: '200px' }}>
-          <div className="bg-stone-950 border border-red-900/50 rounded-md p-3 shadow-2xl"
-            style={{ boxShadow: '0 0 20px rgba(0,0,0,0.95)' }}>
-            <div className="font-cinzel text-xs font-bold text-amber-300 mb-1">
+          <div className="bg-stone-950 rounded-md p-3 shadow-2xl"
+            style={{ boxShadow: '0 0 20px rgba(0,0,0,0.95)', border: '1px solid rgba(255,209,82,0.15)' }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>
               {def.name}
             </div>
-            <div className="font-fell text-xs text-stone-300 italic leading-relaxed">
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#c4b9a8', lineHeight: 1.5 }}>
               {def.description}
             </div>
-            <div className="flex items-center gap-1 mt-2 text-xs text-stone-600 font-fell">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, fontFamily: 'Cinzel, serif', fontSize: 14, color: '#c4b9a8' }}>
               <span>{isPermanent ? '📌' : '⚡'}</span>
               <span>{isPermanent ? 'Stays on table' : 'Instant effect'}</span>
             </div>
           </div>
           <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2
-            w-2.5 h-2.5 bg-stone-950 border-r border-b border-red-900/50 rotate-45" />
+            w-2.5 h-2.5 bg-stone-950 border-r border-b rotate-45" style={{ borderColor: 'rgba(255,209,82,0.15)' }} />
         </div>
+      )}
+
+      {/* Confirm modal */}
+      {showConfirm && createPortal(
+        <div
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 9000,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+          onClick={handleCancelUse}
+        >
+          <div
+            style={{ width: 'min(90vw, 420px)', position: 'relative' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{
+              background: '#0e0c09',
+              border: '1px solid rgba(255,209,82,0.25)',
+              borderRadius: 12,
+              boxShadow: '0 16px 64px rgba(0,0,0,0.98)',
+              overflow: 'hidden',
+            }}>
+              {/* Card info */}
+              <div style={{ padding: '28px 28px 20px' }}>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 32, fontWeight: 700, color: '#ffd152', marginBottom: 14 }}>
+                  {def.name || trump.type}
+                </div>
+                <div style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#e8d5b0', lineHeight: 1.6 }}>
+                  {def.description || '—'}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 18, fontFamily: 'Cinzel, serif', fontSize: 18, color: '#7a6a50' }}>
+                  <span>{isPermanent ? '📌' : '⚡'}</span>
+                  <span>{isPermanent ? 'Stays on table' : 'Instant effect'}</span>
+                </div>
+              </div>
+              {/* Action buttons */}
+              <div style={{ display: 'flex', borderTop: '1px solid rgba(255,209,82,0.1)' }}>
+                <button
+                  onClick={handleCancelUse}
+                  style={{
+                    flex: 1, padding: '18px', fontFamily: 'Cinzel, serif', fontSize: 18,
+                    color: '#7a6a50', background: 'none', border: 'none',
+                    borderRight: '1px solid rgba(255,209,82,0.1)', cursor: 'pointer',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.color = '#e8d5b0'}
+                  onMouseLeave={e => e.currentTarget.style.color = '#7a6a50'}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmUse}
+                  style={{
+                    flex: 1, padding: '18px', fontFamily: 'Cinzel, serif', fontSize: 18,
+                    fontWeight: 700, color: '#ffd152', background: 'rgba(255,209,82,0.08)',
+                    border: 'none', cursor: 'pointer',
+                    letterSpacing: '0.08em', textTransform: 'uppercase',
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,209,82,0.18)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,209,82,0.08)'}
+                >
+                  Use it
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

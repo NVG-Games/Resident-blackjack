@@ -45,97 +45,65 @@ export default function StartScreen({ onStart }) {
     <div
       ref={containerRef}
       className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
-      style={{
-        background: 'radial-gradient(ellipse at center, #1a0a04 0%, #0d0500 50%, #000000 100%)',
-      }}
+      style={{ background: 'radial-gradient(ellipse at 50% 40%, #120e09 0%, #080604 60%, #040302 100%)' }}
     >
-      {/* Background texture */}
-      <div className="absolute inset-0 opacity-20"
-        style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(139,0,0,0.08) 40px, rgba(139,0,0,0.08) 41px)',
-        }}
+      {/* Subtle texture */}
+      <div className="absolute inset-0 opacity-10"
+        style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,209,82,0.04) 60px, rgba(255,209,82,0.04) 61px)' }}
       />
-
       {/* Vignette */}
       <div className="absolute inset-0"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.85) 100%)' }}
       />
 
-      {/* Blood drips from top */}
-      {[5, 15, 28, 42, 58, 71, 84, 93].map((left, i) => (
-        <div key={i} className="absolute top-0 pointer-events-none"
-          style={{ left: `${left}%` }}>
-          <div
-            style={{
-              width: `${2 + Math.random() * 3}px`,
-              height: `${20 + Math.random() * 80}px`,
-              background: 'linear-gradient(180deg, #8b0000, #4a0000cc, transparent)',
-              borderRadius: '0 0 50% 50%',
-              opacity: 0.5 + Math.random() * 0.4,
-            }}
-          />
-        </div>
-      ))}
-
-      {/* Decorative cards in background */}
-      <div ref={cardsRef} className="absolute flex gap-4 opacity-15" style={{ top: '8%' }}>
+      {/* Decorative cards */}
+      <div ref={cardsRef} className="absolute flex gap-4 opacity-15" style={{ top: '6%' }}>
         {[1, 5, 9, 3, 11, 7].map((val, i) => (
           <StartCard key={i} value={val} rotation={-15 + i * 6} />
         ))}
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-8 px-8 text-center">
+      <div className="relative z-10 flex flex-col items-center gap-6 px-8 text-center">
 
-        {/* Logo/Title */}
         <div ref={titleRef}>
-          <div className="font-fell italic text-stone-500 text-sm tracking-[0.5em] uppercase mb-2">
-            Lucas Baker presents
-          </div>
-          <h1
-            className="font-cinzel font-black text-7xl md:text-8xl tracking-[0.2em] uppercase"
-            style={{
-              color: '#f0e2c0',
-              textShadow: '0 0 20px rgba(139,0,0,0.7), 0 4px 8px rgba(0,0,0,0.9)',
-            }}
-          >
+          <h1 className="font-cinzel font-black tracking-[0.2em] uppercase"
+            style={{ fontSize: 'clamp(72px,12vw,100px)', lineHeight: 1, color: '#e8d5b0', textShadow: '0 0 40px rgba(255,209,82,0.15), 0 4px 12px rgba(0,0,0,0.95)' }}>
             21
           </h1>
-          <div className="font-cinzel text-xs tracking-[0.8em] uppercase text-stone-500 mt-2">
-            Resident Evil VII — Card Game
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#5a5040', letterSpacing: '0.4em', textTransform: 'uppercase', marginTop: 10 }}>
+            Card Game
           </div>
         </div>
 
-        {/* Ornamental divider */}
-        <div className="flex items-center gap-4 w-full max-w-sm">
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, #8b0000, transparent)' }} />
-          <span className="text-red-900 text-xs">✦</span>
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, #8b0000, transparent)' }} />
+        {/* Divider */}
+        <div className="flex items-center gap-4 w-full max-w-xs">
+          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,209,82,0.2), transparent)' }} />
+          <span style={{ color: 'rgba(255,209,82,0.4)', fontSize: 12 }}>✦</span>
+          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,209,82,0.2), transparent)' }} />
         </div>
 
         {/* Description */}
-        <div ref={subtitleRef} className="max-w-md">
-          <p className="font-fell italic text-stone-400 text-base leading-relaxed">
-            "A modified game of Blackjack. One deck, eleven cards numbered 1 through 11.
-            No duplicates. You and your opponent share the same deck."
+        <div ref={subtitleRef} style={{ maxWidth: 400 }}>
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 20, color: '#7a6a50', lineHeight: 1.7, fontStyle: 'italic' }}>
+            One deck. Eleven cards. No duplicates. You and your opponent share the same deck.
           </p>
-          <p className="font-fell italic text-stone-600 text-sm mt-3">
-            — Survive all three phases. Finger. Shock. Saw.
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a4a38', marginTop: 10, fontStyle: 'italic' }}>
+            Survive all three phases — Finger, Shock, Saw.
           </p>
         </div>
 
-        {/* Rules summary */}
-        <div className="grid grid-cols-3 gap-4 max-w-md text-center">
+        {/* Phase grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, maxWidth: 360, width: '100%' }}>
           {[
-            { icon: '✂', phase: 'Finger', desc: 'No trump cards' },
-            { icon: '⚡', phase: 'Shock', desc: 'Trumps introduced' },
-            { icon: '⚙', phase: 'Saw', desc: 'One mistake ends it' },
+            { icon: '✂', phase: 'Finger', desc: 'No trumps' },
+            { icon: '⚡', phase: 'Shock', desc: 'Trumps active' },
+            { icon: '⚙', phase: 'Saw', desc: 'High stakes' },
           ].map(({ icon, phase, desc }) => (
-            <div key={phase}
-              className="p-3 rounded border border-stone-800 bg-black/30">
-              <div className="text-2xl mb-1">{icon}</div>
-              <div className="font-cinzel text-xs text-stone-300 font-bold">{phase}</div>
-              <div className="font-fell text-xs text-stone-600 italic">{desc}</div>
+            <div key={phase} style={{ padding: '12px 8px', borderRadius: 4, border: '1px solid rgba(255,209,82,0.08)', background: 'rgba(0,0,0,0.3)', textAlign: 'center' }}>
+              <div style={{ fontSize: 28, marginBottom: 6 }}>{icon}</div>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#e8d5b0', fontWeight: 700, letterSpacing: '0.1em' }}>{phase}</div>
+              <div style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a4a38', marginTop: 4, fontStyle: 'italic' }}>{desc}</div>
             </div>
           ))}
         </div>
@@ -144,33 +112,19 @@ export default function StartScreen({ onStart }) {
         <button
           ref={btnRef}
           onClick={onStart}
-          className="group relative font-cinzel text-base font-bold tracking-[0.3em] uppercase
-            px-12 py-4 rounded border-2 transition-all duration-300
-            hover:scale-105 active:scale-95"
+          className="font-cinzel font-bold uppercase hover:scale-105 active:scale-95 transition-all duration-200"
           style={{
-            borderColor: '#8b0000',
-            color: '#f0e2c0',
-            background: 'linear-gradient(135deg, rgba(139,0,0,0.2), rgba(0,0,0,0.8))',
-            boxShadow: '0 0 20px rgba(139,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+            fontSize: 24, letterSpacing: '0.08em', padding: '17px 52px', borderRadius: 4,
+            color: '#ffd152', background: 'rgba(255,209,82,0.06)', border: '1px solid rgba(255,209,82,0.4)',
           }}
-          onMouseEnter={e => {
-            gsap.to(e.currentTarget, {
-              boxShadow: '0 0 40px rgba(139,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            });
-          }}
-          onMouseLeave={e => {
-            gsap.to(e.currentTarget, {
-              boxShadow: '0 0 20px rgba(139,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            });
-          }}
+          onMouseEnter={e => gsap.to(e.currentTarget, { background: 'rgba(255,209,82,0.12)', borderColor: 'rgba(255,209,82,0.7)', duration: 0.2 })}
+          onMouseLeave={e => gsap.to(e.currentTarget, { background: 'rgba(255,209,82,0.06)', borderColor: 'rgba(255,209,82,0.4)', duration: 0.2 })}
         >
           Begin the Game
         </button>
 
-        <div className="font-fell italic text-stone-700 text-xs">
-          You play as Clancy Jarvis. Your opponent is Hoffman.
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#4a3a28', fontStyle: 'italic' }}>
+          You play first. Your opponent goes second.
         </div>
       </div>
     </div>

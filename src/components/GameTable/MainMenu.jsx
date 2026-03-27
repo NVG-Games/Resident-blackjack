@@ -10,8 +10,8 @@ export default function MainMenu({ onStart }) {
   useEffect(() => {
     const tl = gsap.timeline();
     tl.fromTo(cardsRef.current,
-      { y: 60, opacity: 0, rotateX: 20 },
-      { y: 0, opacity: 1, rotateX: 0, duration: 1, ease: 'power3.out' }
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.8, ease: 'power3.out' }
     )
     .fromTo(titleRef.current,
       { y: 30, opacity: 0 },
@@ -40,215 +40,165 @@ export default function MainMenu({ onStart }) {
   }, []);
 
   const hoverIn = (e) => gsap.to(e.currentTarget, {
-    boxShadow: '0 0 40px rgba(139,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5)',
-    duration: 0.3,
+    borderColor: 'rgba(255,209,82,0.55)',
+    color: '#ffd152',
+    duration: 0.25,
   });
   const hoverOut = (e) => gsap.to(e.currentTarget, {
-    boxShadow: '0 0 20px rgba(139,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-    duration: 0.3,
+    borderColor: 'rgba(255,209,82,0.25)',
+    color: '#e8d5b0',
+    duration: 0.25,
   });
 
   const btnStyle = {
-    borderColor: '#8b0000',
-    color: '#f0e2c0',
-    background: 'linear-gradient(135deg, rgba(139,0,0,0.2), rgba(0,0,0,0.8))',
-    boxShadow: '0 0 20px rgba(139,0,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+    borderColor: 'rgba(255,209,82,0.25)',
+    color: '#e8d5b0',
+    background: 'linear-gradient(135deg, rgba(255,209,82,0.04), rgba(0,0,0,0.7))',
+    boxShadow: 'none',
   };
 
-  const btnBase = `font-cinzel text-sm font-bold tracking-[0.2em] sm:tracking-[0.3em] uppercase
-    px-6 sm:px-10 py-4 sm:py-4 rounded border-2 transition-all duration-200
+  const btnBase = `font-cinzel font-bold uppercase
+    rounded border-2 transition-all duration-200
     hover:scale-105 active:scale-95 w-full`;
 
   return (
     <div
       className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'radial-gradient(ellipse at center, #1a0a04 0%, #0d0500 50%, #000000 100%)',
+        background: 'radial-gradient(ellipse at 50% 40%, #120e08 0%, #080604 60%, #030201 100%)',
       }}
     >
-      {/* Background horizontal lines texture */}
-      <div className="absolute inset-0 opacity-20"
+      {/* Subtle horizontal texture */}
+      <div className="absolute inset-0 opacity-10"
         style={{
-          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(139,0,0,0.08) 40px, rgba(139,0,0,0.08) 41px)',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 60px, rgba(255,209,82,0.04) 60px, rgba(255,209,82,0.04) 61px)',
         }}
       />
 
       {/* Vignette */}
       <div className="absolute inset-0"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.7) 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at center, transparent 25%, rgba(0,0,0,0.85) 100%)' }}
       />
 
-      {/* Blood drips */}
-      {[5, 15, 28, 42, 58, 71, 84, 93].map((left, i) => (
-        <div key={i} className="absolute top-0 pointer-events-none"
-          style={{ left: `${left}%` }}>
-          <div
-            style={{
-              width: `${2 + (i % 3)}px`,
-              height: `${20 + (i * 11) % 70}px`,
-              background: 'linear-gradient(180deg, #8b0000, #4a0000cc, transparent)',
-              borderRadius: '0 0 50% 50%',
-              opacity: 0.5 + (i % 3) * 0.15,
-            }}
-          />
-        </div>
-      ))}
-
-      {/* Decorative cards in background — hidden on very small screens */}
-      <div ref={cardsRef} className="absolute hidden sm:flex gap-4 opacity-15" style={{ top: '8%' }}>
+      {/* Decorative cards above content */}
+      <div ref={cardsRef} className="relative z-10" style={{ display: 'flex', gap: 12, opacity: 0.15, marginBottom: 60, maxWidth: '100vw', overflow: 'hidden', paddingLeft: 8, paddingRight: 8 }}>
         {[1, 5, 9, 3, 11, 7].map((val, i) => (
           <StartCard key={i} value={val} rotation={-15 + i * 6} />
         ))}
       </div>
 
       {/* Main content */}
-      <div className="relative z-10 flex flex-col items-center gap-4 sm:gap-8 px-6 sm:px-8 text-center max-w-lg w-full">
+      <div className="relative z-10 flex flex-col items-center px-6 sm:px-8 text-center max-w-lg w-full" style={{ gap: 32 }}>
 
         {/* Title */}
-        <div ref={titleRef}>
-          <div className="font-fell italic text-stone-500 text-xs sm:text-sm tracking-[0.4em] sm:tracking-[0.5em] uppercase mb-1 sm:mb-2">
-            Lucas Baker presents
-          </div>
+        <div ref={titleRef} style={{ textAlign: 'center' }}>
           <h1
             className="font-cinzel font-black text-6xl sm:text-7xl md:text-8xl tracking-[0.2em] uppercase"
             style={{
-              color: '#f0e2c0',
-              textShadow: '0 0 20px rgba(139,0,0,0.7), 0 4px 8px rgba(0,0,0,0.9)',
+              color: '#e8d5b0',
+              textShadow: '0 0 40px rgba(255,209,82,0.15), 0 4px 12px rgba(0,0,0,0.95)',
             }}
           >
             21
           </h1>
-          <div className="font-cinzel text-xs tracking-[0.5em] sm:tracking-[0.8em] uppercase text-stone-500 mt-1 sm:mt-2">
-            Resident Evil VII — Card Game
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#7a6a50', letterSpacing: '0.4em', textTransform: 'uppercase', marginTop: 10 }}>
+            Card Game
           </div>
         </div>
 
         {/* Ornamental divider */}
-        <div className="flex items-center gap-4 w-full">
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, #8b0000, transparent)' }} />
-          <span className="text-red-900 text-xs">✦</span>
-          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, #8b0000, transparent)' }} />
-        </div>
-
-        {/* Subtitle — shorter on mobile */}
-        <div ref={subtitleRef} className="px-2">
-          <p className="font-fell italic text-stone-400 text-sm sm:text-base leading-relaxed">
-            <span className="hidden sm:inline">"A modified game of Blackjack. One deck, eleven cards numbered 1 through 11.
-            No duplicates. You and your opponent share the same deck."</span>
-            <span className="sm:hidden">"One deck, eleven cards. No duplicates. Survive all three phases."</span>
-          </p>
-          <p className="font-fell italic text-stone-600 text-xs sm:text-sm mt-2 sm:mt-3">
-            — Finger. Shock. Saw.
-          </p>
-        </div>
-
-        {/* Phase grid — hidden on small phones to save space */}
-        <div className="hidden sm:grid grid-cols-3 gap-4 w-full text-center">
-          {[
-            { icon: '✂', phase: 'Finger', desc: 'No trump cards' },
-            { icon: '⚡', phase: 'Shock', desc: 'Trumps introduced' },
-            { icon: '⚙', phase: 'Saw', desc: 'One mistake ends it' },
-          ].map(({ icon, phase, desc }) => (
-            <div key={phase}
-              className="p-3 rounded border border-stone-800 bg-black/30">
-              <div className="text-2xl mb-1">{icon}</div>
-              <div className="font-cinzel text-xs text-stone-300 font-bold">{phase}</div>
-              <div className="font-fell text-xs text-stone-600 italic">{desc}</div>
-            </div>
-          ))}
+        <div ref={subtitleRef} className="flex items-center gap-4 w-full">
+          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,209,82,0.2), transparent)' }} />
+          <span style={{ color: 'rgba(255,209,82,0.4)', fontSize: 12 }}>✦</span>
+          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(255,209,82,0.2), transparent)' }} />
         </div>
 
         {/* Buttons */}
-        <div ref={btnsRef} className="flex flex-col gap-3 w-full max-w-xs">
+        <div ref={btnsRef} className="flex flex-col w-full max-w-xs" style={{ gap: 0 }}>
+
+          {/* PRIMARY: Multiplayer */}
           <button
             className={btnBase}
-            style={btnStyle}
-            onMouseEnter={hoverIn}
-            onMouseLeave={hoverOut}
+            style={{
+              fontSize: 20,
+              padding: '16px 32px',
+              letterSpacing: '0.04em',
+              color: '#ffd152',
+              background: 'rgba(255,209,82,0.06)',
+              border: '1px solid rgba(255,209,82,0.45)',
+              borderRadius: 4,
+              width: '100%',
+            }}
+            onMouseEnter={(e) => gsap.to(e.currentTarget, { background: 'rgba(255,209,82,0.13)', borderColor: 'rgba(255,209,82,0.8)', color: '#ffe680', duration: 0.2 })}
+            onMouseLeave={(e) => gsap.to(e.currentTarget, { background: 'rgba(255,209,82,0.06)', borderColor: 'rgba(255,209,82,0.45)', color: '#ffd152', duration: 0.2 })}
+            onClick={() => onStart({ mode: 'online' })}
+          >
+            Multiplayer
+          </button>
+
+          {/* Divider between primary and secondary */}
+          <div style={{ height: 1, background: 'rgba(255,209,82,0.12)', margin: '16px 0' }} />
+
+          {/* SECONDARY: VS AI */}
+          <button
+            className={btnBase}
+            style={{
+              fontSize: 18,
+              padding: '13px 32px',
+              letterSpacing: '0.04em',
+              width: '100%',
+              marginBottom: 8,
+              color: '#e8d5b0',
+              background: 'transparent',
+              border: '1px solid rgba(232,213,176,0.2)',
+              borderRadius: 4,
+            }}
+            onMouseEnter={(e) => gsap.to(e.currentTarget, { borderColor: 'rgba(232,213,176,0.5)', color: '#f5ead4', duration: 0.2 })}
+            onMouseLeave={(e) => gsap.to(e.currentTarget, { borderColor: 'rgba(232,213,176,0.2)', color: '#e8d5b0', duration: 0.2 })}
             onClick={() => onStart({ mode: 'ai' })}
           >
             Play vs AI
           </button>
+
+          {/* SECONDARY: Hot-seat */}
           <button
             className={btnBase}
             style={{
-              ...btnStyle,
-              borderColor: '#5a3a00',
-              background: 'linear-gradient(135deg, rgba(90,58,0,0.2), rgba(0,0,0,0.8))',
-              boxShadow: '0 0 20px rgba(90,58,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
+              fontSize: 18,
+              padding: '13px 32px',
+              letterSpacing: '0.04em',
+              width: '100%',
+              color: '#e8d5b0',
+              background: 'transparent',
+              border: '1px solid rgba(232,213,176,0.2)',
+              borderRadius: 4,
             }}
-            onMouseEnter={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 40px rgba(90,58,0,0.7), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 20px rgba(90,58,0,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
+            onMouseEnter={(e) => gsap.to(e.currentTarget, { borderColor: 'rgba(232,213,176,0.5)', color: '#f5ead4', duration: 0.2 })}
+            onMouseLeave={(e) => gsap.to(e.currentTarget, { borderColor: 'rgba(232,213,176,0.2)', color: '#e8d5b0', duration: 0.2 })}
             onClick={() => onStart({ mode: 'hotseat' })}
           >
-            Play vs Yourself
+            Local Duel
           </button>
+
+          {/* Divider */}
+          <div style={{ height: 1, background: 'rgba(255,209,82,0.06)', margin: '14px 0' }} />
+
+          {/* TERTIARY: small utility buttons */}
           <button
             className={btnBase}
-            style={{
-              ...btnStyle,
-              borderColor: '#003a5a',
-              background: 'linear-gradient(135deg, rgba(0,58,90,0.2), rgba(0,0,0,0.8))',
-              boxShadow: '0 0 20px rgba(0,58,90,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-            }}
-            onMouseEnter={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 40px rgba(0,80,140,0.7), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 20px rgba(0,58,90,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
-            onClick={() => onStart({ mode: 'online' })}
-          >
-            Multiplayer (P2P)
-          </button>
-          <button
-            className={btnBase}
-            style={{
-              ...btnStyle,
-              borderColor: '#2a4a1a',
-              background: 'linear-gradient(135deg, rgba(30,60,10,0.2), rgba(0,0,0,0.8))',
-              boxShadow: '0 0 20px rgba(30,60,10,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              fontSize: '0.7rem',
-            }}
-            onMouseEnter={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 40px rgba(40,100,10,0.6), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 20px rgba(30,60,10,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
+            style={{ ...btnStyle, fontSize: 16, padding: '11px 24px', letterSpacing: '0.02em', width: '100%', opacity: 0.7, marginBottom: 6 }}
+            onMouseEnter={hoverIn}
+            onMouseLeave={hoverOut}
             onClick={() => onStart({ mode: 'assistant' })}
           >
             🃏 Real Game Assistant
           </button>
-          {/* LLM mode only available when MCP server URL is configured (local dev / Docker).
-              Hidden on GitHub Pages and Telegram where no MCP server runs. */}
+
           {import.meta.env.VITE_MCP_URL && <button
             className={btnBase}
-            style={{
-              ...btnStyle,
-              borderColor: '#3a1a5c',
-              background: 'linear-gradient(135deg, rgba(60,20,100,0.2), rgba(0,0,0,0.8))',
-              boxShadow: '0 0 20px rgba(60,20,100,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              fontSize: '0.7rem',
-            }}
-            onMouseEnter={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 40px rgba(100,40,180,0.6), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
-            onMouseLeave={(e) => gsap.to(e.currentTarget, {
-              boxShadow: '0 0 20px rgba(60,20,100,0.3), inset 0 0 20px rgba(0,0,0,0.5)',
-              duration: 0.3,
-            })}
+            style={{ ...btnStyle, fontSize: 16, padding: '11px 24px', letterSpacing: '0.02em', width: '100%', opacity: 0.7 }}
+            onMouseEnter={hoverIn}
+            onMouseLeave={hoverOut}
             onClick={() => onStart({ mode: 'llm' })}
           >
             ✦ Play vs Claude AI
@@ -266,8 +216,8 @@ function StartCard({ value, rotation }) {
     <div
       className="flex-shrink-0 rounded border border-stone-600/30"
       style={{
-        width: 60,
-        height: 84,
+        width: 52,
+        height: 72,
         transform: `rotate(${rotation}deg)`,
         background: '#f0e2c0',
         display: 'flex',
@@ -278,7 +228,7 @@ function StartCard({ value, rotation }) {
       <span
         style={{
           fontFamily: 'Cinzel, serif',
-          fontSize: 28,
+          fontSize: 24,
           fontWeight: 700,
           color: isRed ? '#8b0000' : '#1a1008',
         }}

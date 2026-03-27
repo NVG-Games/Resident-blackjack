@@ -35,8 +35,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   // playerRole affects name labels. Engine is unchanged: "player" = top of reducer, "bot" = bottom.
   // If you picked Hoffman: the "player" slot is labelled Hoffman, "bot" slot is labelled Clancy.
-  const player1Name = playerRole === 'clancy' ? 'Clancy' : 'Hoffman';
-  const player2Name = playerRole === 'clancy' ? 'Hoffman' : 'Clancy';
+  const player1Name = playerRole === 'clancy' ? 'Player 1' : 'Player 2';
+  const player2Name = playerRole === 'clancy' ? 'Player 2' : 'Player 1';
 
   const [state, dispatch] = useReducer(gameReducer, null, () => ({
     ...createInitialState(),
@@ -44,7 +44,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       type: 'phase',
       phase: 'FINGER',
       message: 'FINGER PHASE',
-      subMessage: 'No trump cards. Card count carefully. Lose... and Lucas takes your fingers.',
+      subMessage: 'No trump cards. Count carefully. One wrong move costs you everything.',
     },
   }));
 
@@ -71,15 +71,14 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   const [isThinking, setIsThinking] = useState(false);
 
-  // hot-seat: show handoff screen before BOT_TURN actions
-  const [showHandoff, setShowHandoff] = useState(false);
-  // hot-seat: player 2 has confirmed handoff and is now acting
+  // hot-seat pass-and-play: whose turn is confirmed (null = need handoff)
+  // 'p1' = P1 confirmed Ready, 'p2' = P2 confirmed Ready, null = nobody yet
+  const [confirmedPlayer, setConfirmedPlayer] = useState(null);
+  // keep for online mode compat
   const [hotSeatBotActive, setHotSeatBotActive] = useState(false);
 
   const tableRef = useRef(null);
   const stateRef = useRef(state);
-  // Prevents double-dispatch from rapid clicks — reset on every render
-  const actionPendingRef = useRef(false);
 
   // LLM bot — always call the hook (hooks can't be conditional), decide is a stable ref
   const { decide: llmDecide } = useLlmBot();
@@ -88,6 +87,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   // Track the last LLM reasoning string for display
   const [llmReasoning, setLlmReasoning] = useState(null);
+
 
   const shakeTable = useCallback(() => {
     if (!tableRef.current) return;
@@ -140,42 +140,34 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     if (state.roundResult?.winner === 'bot') shakeTable();
   }, [state.roundResult, shakeTable]);
 
-  // Hot-seat: when BOT_TURN starts, show handoff screen (unless bot already stood)
-  // Online guest (Hoffman): no handoff needed — they ARE the bot slot already
-  // Online host (Clancy): never needs bot controls — AI handles bot slot, guest controls it
+  // Hot-seat: reset confirmation on every turn change → triggers handoff screen.
+  // Exception: when round just started (PLAYER_TURN after DEALING), P1 already has the device,
+  // so auto-confirm P1 — no handoff needed at the very start of a round.
+  // Online guest: activate bot controls directly.
+  const prevRoundStateRef = useRef(state.roundState);
   useEffect(() => {
     if (!isHotSeat && !isOnline) return;
     if (isOnline) {
-      if (isHost) return; // host never gets bot controls — guest manages bot slot
-      // Guest only: BOT_TURN is the guest's turn — activate bot controls directly
-      if (state.roundState === ROUND_STATE.BOT_TURN && !state.botStood) {
-        setHotSeatBotActive(true);
-      }
-      if (state.roundState !== ROUND_STATE.BOT_TURN) {
-        setHotSeatBotActive(false);
-      }
+      if (isHost) return;
+      if (state.roundState === ROUND_STATE.BOT_TURN) setHotSeatBotActive(true);
+      else setHotSeatBotActive(false);
       return;
     }
-    // Hot-seat path
-    if (state.roundState === ROUND_STATE.BOT_TURN && !state.botStood && !hotSeatBotActive) {
-      setShowHandoff(true);
-    }
-    if (state.roundState !== ROUND_STATE.BOT_TURN) {
-      setShowHandoff(false);
-      setHotSeatBotActive(false);
-    }
-  }, [state.roundState, state.botStood, isHotSeat, isOnline, hotSeatBotActive]);
+    const prev = prevRoundStateRef.current;
+    prevRoundStateRef.current = state.roundState;
 
-  // Hot-seat: if bot already stood when BOT_TURN is triggered, dispatch stand immediately
-  useEffect(() => {
-    if (!isHotSeat) return;
-    if (state.roundState === ROUND_STATE.BOT_TURN && state.botStood) {
-      const t = setTimeout(() => {
-        dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
-      }, 150);
-      return () => clearTimeout(t);
+    if (state.roundState === ROUND_STATE.BOT_TURN) {
+      // P1 just acted → handoff to P2
+      setConfirmedPlayer(null);
+    } else if (state.roundState === ROUND_STATE.PLAYER_TURN && prev === ROUND_STATE.BOT_TURN) {
+      // P2 just acted → handoff to P1
+      setConfirmedPlayer(null);
+    } else {
+      // Round just started — P1 already has device
+      setConfirmedPlayer('p1');
     }
-  }, [state.roundState, state.botStood, isHotSeat]);
+  }, [state.roundState, isHotSeat, isOnline, isHost]);
+
 
   // AI Bot / LLM Bot logic — disabled in hot-seat and online modes
   //
@@ -219,17 +211,46 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     takeBotTurn();
     return () => { cancelled = true; setIsThinking(false); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.roundState, state.botHand.length, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm]);
+  }, [state.roundState, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm]);
 
   stateRef.current = state;
-  actionPendingRef.current = false; // reset after each render — state has been applied
 
-  // Dispatch helper with double-click guard
   const guardedDispatch = useCallback((a) => {
-    if (actionPendingRef.current) return;
-    actionPendingRef.current = true;
     if (isOnline) syncedDispatch(a); else dispatch(a);
   }, [isOnline, syncedDispatch]);
+
+  // Turn timer — 60s countdown, auto-stand on expiry. Active in AI, LLM and Online modes (not hotseat).
+  const TURN_TIMER_SEC = 60;
+  const [turnSecondsLeft, setTurnSecondsLeft] = useState(null);
+
+  useEffect(() => {
+    if (isHotSeat) return;
+    if (state.gameOver) return;
+    const isMyTurn = isOnline
+      ? (isHost ? isPlayerTurn : isBotTurn && hotSeatBotActive)
+      : isPlayerTurn;
+    if (!isMyTurn) { setTurnSecondsLeft(null); return; }
+
+    setTurnSecondsLeft(TURN_TIMER_SEC);
+    const interval = setInterval(() => {
+      setTurnSecondsLeft(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          // Auto-stand
+          if (isOnline) {
+            if (isHost) syncedDispatch({ type: ACTIONS.PLAYER_STAND });
+            else syncedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
+          } else {
+            dispatch({ type: ACTIONS.PLAYER_STAND });
+          }
+          return null;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.roundState, state.gameOver, isHotSeat, isOnline, isHost, hotSeatBotActive]);
 
   // Player 1 actions (PLAYER_TURN) — mirrored to peer in online mode
   const handleHit = useCallback(() => {
@@ -268,10 +289,10 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     if (isOnline) syncedDispatch(a); else dispatch(a);
   }, [isOnline, syncedDispatch]);
 
-  const handleHandoffReady = useCallback(() => {
-    setShowHandoff(false);
-    setHotSeatBotActive(true);
-  }, []);
+  const handleHandoffReady = useCallback((who) => {
+    if (isHotSeat) setConfirmedPlayer(who);
+    else setHotSeatBotActive(true);
+  }, [isHotSeat]);
 
   const { roundState, overlay, roundResult, gameOver } = state;
   const showRoundResult = roundState === ROUND_STATE.ROUND_OVER && !overlay && !gameOver;
@@ -280,15 +301,28 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const isBotTurn = roundState === ROUND_STATE.BOT_TURN;
   const isPlayerTurn = roundState === ROUND_STATE.PLAYER_TURN;
 
-  // In hot-seat/online mode during BOT_TURN (after handoff/directly) — show bot controls
-  // Online guest (Hoffman): hotSeatBotActive is set when BOT_TURN fires
-  const showBotControls = (isHotSeat || isOnline) && isBotTurn && hotSeatBotActive && !showHandoff;
+  // Hot-seat pass-and-play:
+  // After every roundState change, confirmedPlayer resets to null.
+  // HandoffScreen shows until the right player confirms.
+  const activeIsP1 = isPlayerTurn; // engine: PLAYER_TURN = P1's turn, BOT_TURN = P2's turn
+  const needsHandoff = isHotSeat && (isPlayerTurn || isBotTurn) && confirmedPlayer === null
+    && !state.gameOver && roundState !== ROUND_STATE.ROUND_OVER
+    && roundState !== ROUND_STATE.DEALING && roundState !== ROUND_STATE.RESOLVING
+    && !(state.playerStood && state.botStood);
 
-  // In AI mode: disable when thinking or not player turn
-  // In hot-seat player turn: always active when it's PLAYER_TURN
-  // Online host (Clancy): disabled unless PLAYER_TURN; guest (Hoffman): disabled unless BOT_TURN
+  const showHandoff = needsHandoff; // single HandoffScreen for both players
+  const handoffTarget = activeIsP1 ? player1Name : player2Name; // who to pass to
+
+  // Bot controls: P2's turn and P2 confirmed (regardless of botStood)
+  const showBotControls = isOnline
+    ? (isBotTurn && hotSeatBotActive)
+    : isHotSeat
+      ? (isBotTurn && confirmedPlayer === 'p2')
+      : false;
+
+  // P1 can act when: PLAYER_TURN + confirmed
   const isActionDisabled = isHotSeat
-    ? !isPlayerTurn
+    ? !isPlayerTurn || confirmedPlayer !== 'p1'
     : isOnline
       ? (isHost ? !isPlayerTurn : !isBotTurn || !hotSeatBotActive)
       : isThinking || !isPlayerTurn;
@@ -304,47 +338,41 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const activeTrumpDisabled = showBotControls ? false : isActionDisabled;
 
   return (
-    <div ref={tableRef} className="relative w-full h-full flex flex-col overflow-hidden"
+    <div ref={tableRef} className="relative w-full h-full flex flex-col"
       style={{ fontFamily: 'IM Fell English, serif' }}>
 
-      {/* Background: dark green felt */}
+      {/* Background: noir black */}
       <div className="absolute inset-0"
         style={{
-          background: 'radial-gradient(ellipse at 50% 50%, #0a1f0a 0%, #061206 50%, #030803 100%)',
+          background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 60%, #040302 100%)',
         }}
       />
 
-      {/* Felt texture grain */}
-      <div className="absolute inset-0 opacity-30"
+      {/* Subtle texture */}
+      <div className="absolute inset-0 opacity-20"
         style={{
-          backgroundImage: `
-            repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px),
-            repeating-linear-gradient(90deg, transparent, transparent 3px, rgba(0,0,0,0.05) 3px, rgba(0,0,0,0.05) 4px)
-          `,
+          backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,209,82,0.015) 2px, rgba(255,209,82,0.015) 3px)`,
         }}
       />
 
-      {/* Wood border frame */}
-      <div className="absolute inset-0 pointer-events-none z-10"
-        style={{
-          boxShadow: `
-            inset 0 0 0 14px #1a1008,
-            inset 0 0 0 16px #2d1f0d,
-            inset 0 0 0 18px #1a1008,
-            inset 0 0 80px rgba(0,0,0,0.8)
-          `,
-        }}
+      {/* Gold accent lines on sides */}
+      <div className="absolute inset-y-0 left-0 w-px pointer-events-none z-10"
+        style={{ background: 'linear-gradient(180deg, transparent, rgba(255,209,82,0.15) 20%, rgba(255,209,82,0.15) 80%, transparent)' }}
       />
-
-      {/* Blood drips */}
-      <BloodDrips />
+      <div className="absolute inset-y-0 right-0 w-px pointer-events-none z-10"
+        style={{ background: 'linear-gradient(180deg, transparent, rgba(255,209,82,0.15) 20%, rgba(255,209,82,0.15) 80%, transparent)' }}
+      />
 
       {/* Main game layout — single column, fills viewport */}
-      <div className="relative z-20 flex flex-col h-full px-2 sm:px-6 py-2 sm:py-4 gap-1 sm:gap-2 overflow-hidden">
+      <div className="relative z-20 flex flex-col h-full px-3 sm:px-6 gap-2 sm:gap-3" style={{ paddingTop: 'calc(12px + env(safe-area-inset-top))', paddingBottom: 'calc(90px + env(safe-area-inset-bottom))' }}>
 
-        {/* TOP: Opponent area */}
-        {/* In online mode: guest (Hoffman) sees playerHand (host/Clancy) as opponent — swap areas */}
-        <section className="flex-none flex flex-col items-center gap-1">
+        {/* TOP: Bet panel */}
+        <section className="flex-none w-full">
+          <BetPanel state={state} isGuestOnline={isOnline && !isHost} />
+        </section>
+
+        {/* Opponent area */}
+        <section className="flex-none flex flex-col items-center gap-2" style={{ paddingTop: 16 }}>
           <BotArea
             state={state}
             isThinking={isThinking && !isHotSeat && !isOnline}
@@ -352,89 +380,58 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
             hideCards={isHotSeat && !showBotControls && !showRoundResult}
             hideHoleCard={!isHotSeat}
             flipForGuest={isOnline && !isHost}
+            isActivePlayer={isHotSeat && showBotControls}
           />
-          {/* LLM reasoning bubble — shown when Claude explains its move */}
           {isLlm && llmReasoning && !isThinking && (
             <div
-              className="max-w-xs sm:max-w-sm px-3 py-2 rounded text-xs font-fell italic text-stone-400 text-center"
-              style={{ background: 'rgba(80,20,80,0.25)', border: '1px solid rgba(120,40,120,0.4)' }}
+              className="max-w-xs sm:max-w-sm px-3 py-2 rounded font-fell italic text-center"
+              style={{ fontSize: 14, color: '#a8a29e', background: 'rgba(80,20,80,0.25)', border: '1px solid rgba(120,40,120,0.4)' }}
             >
-              <span className="text-purple-400 not-italic font-cinzel text-xs uppercase tracking-widest">Claude: </span>
+              <span style={{ color: '#c084fc', fontFamily: 'Cinzel, serif', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.1em', fontStyle: 'normal' }}>Claude: </span>
               {llmReasoning}
             </div>
           )}
           {isLlm && isThinking && (
             <div
-              className="max-w-xs px-3 py-2 rounded text-xs font-fell italic text-purple-400 text-center animate-pulse"
-              style={{ background: 'rgba(80,20,80,0.25)', border: '1px solid rgba(120,40,120,0.4)' }}
+              className="px-3 py-2 rounded font-fell italic text-center animate-pulse"
+              style={{ fontSize: 14, color: '#c084fc', background: 'rgba(80,20,80,0.25)', border: '1px solid rgba(120,40,120,0.4)' }}
             >
               Claude is thinking…
             </div>
           )}
         </section>
 
-        {/* MIDDLE: Bet panel + table trumps (compact row) */}
-        <section className="flex-none flex flex-col items-center gap-1">
-          <BetPanel state={state} isGuestOnline={isOnline && !isHost} />
+        {/* CENTER: Deck (left, absolute) + Table Trumps (true center) */}
+        <section className="flex-1 relative flex items-center justify-center w-full min-h-0">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2">
+            <DeckPile count={state.deck.length} />
+          </div>
           <TableTrumps
             playerTableTrumps={state.playerTableTrumps}
             botTableTrumps={state.botTableTrumps}
           />
         </section>
 
-        {/* CENTER: Deck + Log side by side on desktop, deck only on mobile */}
-        <section className="flex-1 flex gap-2 sm:gap-4 items-center justify-center min-h-0">
-          <div className="flex items-center justify-center">
-            <DeckPile count={state.deck.length} />
-          </div>
-          {/* Log: hidden on small screens, visible on sm+ */}
-          <div className="hidden sm:flex w-px bg-stone-900 self-stretch" />
-          <div className="hidden sm:flex w-60 md:w-72 flex-col min-h-0"
-            style={{
-              background: 'rgba(0,0,0,0.5)',
-              border: '1px solid rgba(139,0,0,0.2)',
-              borderRadius: '6px',
-              padding: '8px',
-              maxHeight: '160px',
-            }}>
-            <GameLog log={state.log} />
-          </div>
-        </section>
-
-        {/* ACTION BUTTONS */}
-        <section className="flex-none flex justify-center py-1">
-          <ActionButtons
-            state={state}
-            onHit={showBotControls ? handleBotHit : handleHit}
-            onStand={showBotControls ? handleBotStand : handleStand}
-            disabled={showBotControls ? false : isActionDisabled}
-            isHotSeat={isHotSeat || isOnline}
-            showBotControls={showBotControls}
-            activePlayerName={activePlayerLabel}
-            isBotTurnActive={isBotTurn && !showHandoff}
-            isGuestOnline={isOnline && !isHost}
-          />
-        </section>
-
         {/* BOTTOM: Player area + Trump hand */}
-        <section className="flex-none flex flex-col items-center gap-1 sm:gap-3 pb-1">
+        <section className="flex-none flex flex-col items-center mt-auto" style={{ paddingBottom: 'calc(120px + env(safe-area-inset-bottom))', paddingTop: 12, gap: 20 }}>
           <PlayerArea
             state={state}
             playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
             hideCards={isHotSeat && showBotControls && !showRoundResult}
             flipForGuest={isOnline && !isHost}
+            isOpponent={isHotSeat && showBotControls}
           />
-
-          {/* Trump hand */}
           <div className="w-full max-w-lg">
             <TrumpHand
               trumps={activeTrumpHand}
               onPlay={activeTrumpHandler}
               disabled={activeTrumpDisabled}
               roundState={roundState}
+              forceCanPlay={showBotControls}
             />
           </div>
         </section>
+
       </div>
 
       {/* ROUND RESULT */}
@@ -447,18 +444,66 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         <PhaseOverlay overlay={overlay} onDismiss={handleDismissOverlay} />
       )}
 
-      {/* HOT-SEAT HANDOFF SCREEN */}
-      {isHotSeat && showHandoff && (
+      {/* HOT-SEAT: handoff screen — shows for whoever's turn is next */}
+      {showHandoff && (
         <HandoffScreen
-          toPlayerName={player2Name}
-          onReady={handleHandoffReady}
+          toPlayerName={handoffTarget}
+          onReady={() => handleHandoffReady(activeIsP1 ? 'p1' : 'p2')}
         />
       )}
+
+      {/* ACTION BUTTONS — fixed to bottom, respects iOS home indicator */}
+      <div className="absolute z-30" style={{ bottom: 0, left: 0, right: 0, background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '10px 12px calc(12px + env(safe-area-inset-bottom))' }}>
+        {/* Turn timer — radial */}
+        {turnSecondsLeft !== null && (() => {
+          const pct = turnSecondsLeft / TURN_TIMER_SEC;
+          const r = 22;
+          const circ = 2 * Math.PI * r;
+          const danger = turnSecondsLeft <= 10;
+          const color = danger ? '#ef4444' : '#ffd152';
+          return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+              <svg width={56} height={56} style={{ transform: 'rotate(-90deg)' }}>
+                <circle cx={28} cy={28} r={r} fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth={3} />
+                <circle
+                  cx={28} cy={28} r={r} fill="none"
+                  stroke={color} strokeWidth={3}
+                  strokeDasharray={circ}
+                  strokeDashoffset={circ * (1 - pct)}
+                  strokeLinecap="round"
+                  style={{ transition: 'stroke-dashoffset 0.9s linear, stroke 0.3s' }}
+                />
+                <text
+                  x={28} y={28}
+                  textAnchor="middle" dominantBaseline="central"
+                  style={{ transform: 'rotate(90deg)', transformOrigin: '28px 28px', fontFamily: 'Cinzel, serif', fontSize: 14, fontWeight: 700, fill: color }}
+                >
+                  {turnSecondsLeft}
+                </text>
+              </svg>
+              <span style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: danger ? '#ef4444' : '#7a6a50', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                {danger ? '⚠ Auto-stand soon' : 'Your turn'}
+              </span>
+            </div>
+          );
+        })()}
+        <ActionButtons
+          state={state}
+          onHit={showBotControls ? handleBotHit : handleHit}
+          onStand={showBotControls ? handleBotStand : handleStand}
+          disabled={showBotControls ? !isBotTurn : isActionDisabled}
+          isHotSeat={isHotSeat || isOnline}
+          showBotControls={showBotControls}
+          activePlayerName={activePlayerLabel}
+          isBotTurnActive={isBotTurn && !showHandoff}
+          isGuestOnline={isOnline && !isHost}
+        />
+      </div>
 
       {/* Vignette */}
       <div className="absolute inset-0 pointer-events-none z-5"
         style={{
-          background: 'radial-gradient(ellipse at 50% 50%, transparent 40%, rgba(0,0,0,0.7) 100%)',
+          background: 'radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,0,0,0.85) 100%)',
         }}
       />
     </div>
@@ -469,69 +514,46 @@ function DeckPile({ count }) {
   const stackCount = Math.min(count, 3);
   return (
     <div className="flex flex-col items-center gap-2">
-      <div className="relative" style={{ width: 56, height: 80 }}>
+      <div className="relative" style={{ width: 72, height: 100 }}>
         {count > 0 ? (
           Array.from({ length: stackCount }, (_, i) => (
             <div
               key={i}
-              className="absolute rounded border border-stone-800"
+              className="absolute rounded"
               style={{
-                width: 52,
-                height: 74,
+                width: 66,
+                height: 94,
                 top: (stackCount - 1 - i) * 2,
                 left: (stackCount - 1 - i) * 1,
                 background: i === stackCount - 1
-                  ? 'linear-gradient(145deg, #1a0000, #0d0000)'
-                  : 'linear-gradient(145deg, #150000, #0a0000)',
+                  ? 'linear-gradient(145deg, #1c1410, #0e0a06)'
+                  : 'linear-gradient(145deg, #160f08, #0a0704)',
                 zIndex: i,
-                boxShadow: i === stackCount - 1 ? '0 2px 8px rgba(0,0,0,0.8)' : 'none',
+                border: `1px solid rgba(255,209,82,${i === stackCount - 1 ? '0.2' : '0.08'})`,
+                boxShadow: i === stackCount - 1 ? '0 2px 12px rgba(0,0,0,0.9)' : 'none',
               }}
             >
               {i === stackCount - 1 && (
                 <div className="w-full h-full flex flex-col items-center justify-center">
-                  <div className="w-8 h-8 rounded-full border border-red-900/40 flex items-center justify-center">
-                    <span className="text-red-900/60" style={{ fontSize: 16 }}>☣</span>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center"
+                    style={{ border: '1px solid rgba(255,209,82,0.25)' }}>
+                    <span style={{ fontSize: 18, color: 'rgba(255,209,82,0.4)' }}>✦</span>
                   </div>
                 </div>
               )}
             </div>
           ))
         ) : (
-          <div className="w-12 h-16 border border-dashed border-stone-800 rounded
+          <div className="w-16 h-20 border border-dashed border-stone-700 rounded
             flex items-center justify-center">
-            <span className="text-stone-800 text-xs font-fell">—</span>
+            <span className="text-stone-600 text-sm font-fell">—</span>
           </div>
         )}
       </div>
-      <span className="text-xs text-stone-600 font-fell italic">
+      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#c4b9a8' }}>
         {count} {count === 1 ? 'card' : 'cards'} remain
       </span>
     </div>
   );
 }
 
-function BloodDrips() {
-  const drips = [
-    { left: '6%', h: 38 }, { left: '19%', h: 22 }, { left: '34%', h: 50 },
-    { left: '51%', h: 16 }, { left: '63%', h: 44 }, { left: '78%', h: 28 },
-    { left: '87%', h: 56 }, { left: '95%', h: 20 },
-  ];
-
-  return (
-    <>
-      {drips.map((d, i) => (
-        <div key={i} className="absolute top-0 pointer-events-none z-10"
-          style={{ left: d.left }}>
-          <div
-            style={{
-              width: 2 + (i % 3),
-              height: d.h,
-              background: 'linear-gradient(180deg, #8b0000cc, #4a000066, transparent)',
-              borderRadius: '0 0 50% 50%',
-            }}
-          />
-        </div>
-      ))}
-    </>
-  );
-}

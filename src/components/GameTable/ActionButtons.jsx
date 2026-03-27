@@ -25,7 +25,7 @@ export default function ActionButtons({
   // isStood must reflect the LOCAL player's stood status:
   // - host (Clancy) owns playerStood; guest (Hoffman) owns botStood
   // - showBotControls path is only reached by guest in their BOT_TURN
-  const isStood = isGuestOnline ? botStood : (showBotControls ? botStood : playerStood);
+  const isStood = isGuestOnline ? botStood : (showBotControls ? false : playerStood);
 
   // canAct: in hot-seat bot-controls it's always active (caller sets disabled=false)
   const canAct = !disabled && !isStood;
@@ -44,13 +44,8 @@ export default function ActionButtons({
   }, [canAct, showBotControls]);
 
   const buttonBase = `
-    font-cinzel font-bold uppercase tracking-widest
-    text-sm sm:text-sm
-    px-6 sm:px-8 py-4 sm:py-3
-    min-w-[5rem] sm:min-w-0
-    rounded border transition-all duration-200
-    disabled:opacity-30 disabled:cursor-not-allowed
-    active:scale-95
+    font-cinzel font-bold uppercase
+    disabled:cursor-not-allowed
   `;
 
   // Status message when no action is available
@@ -81,34 +76,44 @@ export default function ActionButtons({
   }
 
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div style={{ width: '100%', boxSizing: 'border-box' }}>
       {/* Active player indicator (hot-seat only) */}
       {isHotSeat && canAct && (
-        <div
-          className="font-cinzel text-xs tracking-[0.2em] sm:tracking-[0.3em] uppercase px-3 sm:px-4 py-1 rounded"
-          style={{
-            background: showBotControls ? 'rgba(90,58,0,0.3)' : 'rgba(139,0,0,0.2)',
-            border: `1px solid ${showBotControls ? '#5a3a00' : '#8b0000'}`,
-            color: showBotControls ? '#f5c842' : '#f0e2c0',
-          }}
-        >
+        <div className="font-cinzel uppercase text-center" style={{ fontSize: 13, letterSpacing: '0.2em', color: 'rgba(255,209,82,0.5)', marginBottom: 4 }}>
           {activePlayerName}'s turn
         </div>
       )}
 
-      <div className="flex items-center gap-3 sm:gap-4 justify-center">
+      {/* Status message */}
+      {statusMsg && (
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#c4b9a8', textAlign: 'center', marginBottom: 8 }}>
+          {statusMsg}
+        </div>
+      )}
+
+      {/* Buttons — full width row, easy thumb targets */}
+      <div style={{ display: 'flex', gap: 10 }}>
         {/* HIT */}
         <button
           ref={hitRef}
           onClick={onHit}
           disabled={!canAct || deadSilenced || deckEmpty}
           title={deadSilenced ? 'Dead Silence — you cannot draw' : ''}
-          className={`${buttonBase}
-            border-amber-700 text-amber-300 bg-amber-900/20
-            hover:bg-amber-900/40 hover:border-amber-500 hover:scale-105
-            active:scale-95
-            ${deadSilenced ? 'opacity-30 cursor-not-allowed' : ''}
-          `}
+          className={`${buttonBase} active:scale-95 ${deadSilenced ? 'opacity-30 cursor-not-allowed' : ''}`}
+          style={{
+            flex: 1,
+            fontSize: 24,
+            padding: '18px 12px',
+            color: canAct && !deadSilenced && !deckEmpty ? '#ffd152' : '#5a4a28',
+            letterSpacing: '0.15em',
+            border: '1px solid',
+            borderColor: canAct && !deadSilenced && !deckEmpty ? 'rgba(255,209,82,0.5)' : 'rgba(255,209,82,0.1)',
+            background: canAct && !deadSilenced && !deckEmpty ? 'rgba(255,209,82,0.04)' : 'transparent',
+            borderRadius: 4,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => { if (canAct) { e.currentTarget.style.background = 'rgba(255,209,82,0.1)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.8)'; } }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = canAct ? 'rgba(255,209,82,0.04)' : 'transparent'; e.currentTarget.style.borderColor = canAct ? 'rgba(255,209,82,0.5)' : 'rgba(255,209,82,0.1)'; }}
         >
           HIT
         </button>
@@ -118,22 +123,25 @@ export default function ActionButtons({
           ref={standRef}
           onClick={onStand}
           disabled={!canAct}
-          className={`${buttonBase}
-            border-stone-600 text-stone-300 bg-stone-900/40
-            hover:bg-stone-800/60 hover:border-stone-400 hover:scale-105
-            active:scale-95
-          `}
+          className={`${buttonBase} active:scale-95`}
+          style={{
+            flex: 1,
+            fontSize: 24,
+            padding: '18px 12px',
+            color: canAct ? '#e8d5b0' : '#3a3020',
+            letterSpacing: '0.15em',
+            border: '1px solid',
+            borderColor: canAct ? 'rgba(232,213,176,0.3)' : 'rgba(232,213,176,0.06)',
+            background: 'transparent',
+            borderRadius: 4,
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={(e) => { if (canAct) { e.currentTarget.style.background = 'rgba(232,213,176,0.06)'; e.currentTarget.style.borderColor = 'rgba(232,213,176,0.5)'; } }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = canAct ? 'rgba(232,213,176,0.3)' : 'rgba(232,213,176,0.06)'; }}
         >
           STAND
         </button>
       </div>
-
-      {/* Status message */}
-      {statusMsg && (
-        <div className="text-xs font-fell italic text-stone-600">
-          {statusMsg}
-        </div>
-      )}
     </div>
   );
 }

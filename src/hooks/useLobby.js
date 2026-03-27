@@ -47,9 +47,12 @@ export function useLobby() {
     if (!SUPABASE_CONFIGURED) return;
     setLoading(true);
     setError(null);
+    // Only show rooms created in the last 2 hours — stale rooms from crashed sessions are hidden
+    const cutoff = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
     const { data, error: err } = await supabase
       .from('rooms')
       .select('*')
+      .gte('created_at', cutoff)
       .order('created_at', { ascending: false });
 
     if (err) {

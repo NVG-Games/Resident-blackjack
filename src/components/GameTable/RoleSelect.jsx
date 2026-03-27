@@ -80,73 +80,47 @@ export default function RoleSelect({ onConfirm, onBack }) {
       ref={containerRef}
       className="w-full h-full flex flex-col items-center justify-center relative overflow-hidden"
       style={{
-        background: 'radial-gradient(ellipse at center, #1a0a04 0%, #0d0500 50%, #000000 100%)',
+        background: 'radial-gradient(ellipse at 50% 40%, #120e09 0%, #080604 60%, #040302 100%)',
       }}
     >
       {/* Vignette */}
-      <div className="absolute inset-0"
+      <div className="absolute inset-0 pointer-events-none"
         style={{ background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.75) 100%)' }}
       />
 
-      {/* Blood drips */}
-      {[12, 35, 57, 80].map((left, i) => (
-        <div key={i} className="absolute top-0 pointer-events-none" style={{ left: `${left}%` }}>
-          <div style={{
-            width: 2 + (i % 2),
-            height: 30 + i * 15,
-            background: 'linear-gradient(180deg, #8b0000cc, transparent)',
-            borderRadius: '0 0 50% 50%',
-            opacity: 0.5,
-          }} />
-        </div>
-      ))}
-
-      <div className="relative z-10 flex flex-col items-center gap-10 px-8 text-center">
+      <div className="relative z-10 flex flex-col items-center w-full text-center" style={{ padding: '24px 16px', gap: 28, maxWidth: 600, margin: '0 auto' }}>
 
         {/* Title */}
         <div ref={titleRef}>
-          <div className="font-fell italic text-stone-500 text-sm tracking-[0.4em] uppercase mb-2">
-            Hot-Seat Mode
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#5a5040', letterSpacing: '0.3em', textTransform: 'uppercase', marginBottom: 8 }}>
+            Local Duel
           </div>
           <h2
-            className="font-cinzel font-bold text-3xl tracking-[0.15em] uppercase"
-            style={{ color: '#f0e2c0', textShadow: '0 0 20px rgba(139,0,0,0.5)' }}
+            className="font-cinzel font-bold uppercase"
+            style={{ fontSize: 28, color: '#e8d5b0', letterSpacing: '0.12em' }}
           >
             Who are you?
           </h2>
-          <p className="font-fell italic text-stone-500 text-sm mt-3">
-            Choose your role. The other player will take turns on the same device.
-          </p>
         </div>
 
-        {/* Character cards */}
-        <div ref={cardsRowRef} className="flex gap-8 items-stretch">
-
-          {/* Clancy */}
+        {/* Character cards — horizontal on wide, vertical on narrow */}
+        <div
+          ref={cardsRowRef}
+          className="flex sm:flex-row flex-col items-stretch gap-3 w-full"
+        >
           <RoleCard
-            name="Clancy Jarvis"
-            subtitle="The Cameraman"
-            description="Deals first. You'll go first each round as Clancy."
-            accentColor="#8b0000"
-            accentGlow="rgba(139,0,0,0.6)"
+            name="Clancy"
+            subtitle="Goes First"
+            accentColor="#7a6530"
+            accentGlow="rgba(255,209,82,0.25)"
             portrait={CLANCY_PORTRAIT}
             onChoose={() => handleChoose('clancy')}
           />
-
-          {/* Divider */}
-          <div className="flex flex-col items-center justify-center gap-3 px-2">
-            <div className="w-px flex-1" style={{ background: 'linear-gradient(180deg, transparent, #4a1a1a, transparent)' }} />
-            <span className="font-fell italic text-stone-600 text-sm">or</span>
-            <div className="w-px flex-1" style={{ background: 'linear-gradient(180deg, transparent, #4a1a1a, transparent)' }} />
-          </div>
-
-          {/* Hoffman */}
           <RoleCard
             name="Hoffman"
-            subtitle="The Survivor"
-            description="Deals second. You'll go first each round as Hoffman."
-            accentColor="#5a3a00"
-            accentGlow="rgba(90,58,0,0.6)"
+            subtitle="Goes Second"
+            accentColor="#4a4030"
+            accentGlow="rgba(200,180,120,0.2)"
             portrait={HOFFMAN_PORTRAIT}
             onChoose={() => handleChoose('hoffman')}
           />
@@ -155,7 +129,9 @@ export default function RoleSelect({ onConfirm, onBack }) {
         {/* Back */}
         <button
           onClick={onBack}
-          className="font-fell italic text-stone-600 text-sm hover:text-stone-400 transition-colors"
+          style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#5a5040', background: 'none', border: 'none', cursor: 'pointer' }}
+          onMouseEnter={e => e.currentTarget.style.color = '#e8d5b0'}
+          onMouseLeave={e => e.currentTarget.style.color = '#5a5040'}
         >
           ← Back to menu
         </button>
@@ -164,16 +140,16 @@ export default function RoleSelect({ onConfirm, onBack }) {
   );
 }
 
-function RoleCard({ name, subtitle, description, accentColor, accentGlow, portrait, onChoose }) {
+function RoleCard({ name, subtitle, accentColor, accentGlow, portrait, onChoose }) {
   const cardRef = useRef(null);
 
   const handleHover = (entering) => {
     if (!cardRef.current) return;
     gsap.to(cardRef.current, {
-      y: entering ? -6 : 0,
+      y: entering ? -4 : 0,
       boxShadow: entering
-        ? `0 12px 40px ${accentGlow}, 0 0 0 1px ${accentColor}`
-        : `0 4px 20px rgba(0,0,0,0.8), 0 0 0 1px rgba(80,40,0,0.3)`,
+        ? `0 12px 40px ${accentGlow}, 0 0 0 1px rgba(255,209,82,0.2)`
+        : `0 4px 20px rgba(0,0,0,0.8)`,
       duration: 0.3,
       ease: 'power2.out',
     });
@@ -182,57 +158,59 @@ function RoleCard({ name, subtitle, description, accentColor, accentGlow, portra
   return (
     <div
       ref={cardRef}
-      className="flex flex-col items-center gap-4 p-6 rounded-lg cursor-pointer select-none"
+      className="flex-1 cursor-pointer select-none rounded-lg"
       style={{
-        width: 180,
-        background: 'linear-gradient(160deg, #120a04, #0a0502)',
-        border: `1px solid rgba(80,40,0,0.3)`,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.8), 0 0 0 1px rgba(80,40,0,0.3)',
+        background: 'linear-gradient(160deg, #0e0c09, #080604)',
+        border: `1px solid rgba(255,209,82,0.1)`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.8)',
+        overflow: 'hidden',
       }}
       onMouseEnter={() => handleHover(true)}
       onMouseLeave={() => handleHover(false)}
       onClick={onChoose}
     >
-      {/* Portrait */}
-      <div
-        className="rounded-lg overflow-hidden"
-        style={{
-          width: 80,
-          height: 100,
-          border: `2px solid ${accentColor}`,
-          boxShadow: `0 0 12px ${accentGlow}`,
-        }}
-      >
-        {portrait}
-      </div>
+      {/* Mobile: row layout (portrait left, info right) */}
+      <div className="flex sm:flex-col items-center sm:items-center" style={{ gap: 0 }}>
 
-      {/* Name */}
-      <div className="text-center">
-        <div className="font-cinzel text-sm font-bold" style={{ color: '#f0e2c0' }}>
-          {name}
+        {/* Portrait */}
+        <div
+          className="flex-shrink-0 rounded-none sm:rounded-none overflow-hidden"
+          style={{
+            width: 80,
+            height: 100,
+            borderRight: `2px solid ${accentColor}`,
+            borderBottom: 'none',
+          }}
+        >
+          <div style={{ width: '100%', height: '100%' }}>{portrait}</div>
         </div>
-        <div className="font-fell italic text-xs text-stone-500 mt-0.5">
-          {subtitle}
+
+        {/* Info */}
+        <div className="flex flex-col flex-1 sm:items-center sm:text-center" style={{ padding: '14px 16px', gap: 10, alignItems: 'flex-start', textAlign: 'left' }}>
+          <div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, fontWeight: 700, color: '#e8d5b0' }}>
+              {name}
+            </div>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#7a6a50', marginTop: 3 }}>
+              {subtitle}
+            </div>
+          </div>
+
+          <button
+            className="font-cinzel font-bold uppercase rounded border"
+            style={{
+              fontSize: 14, padding: '10px 16px', letterSpacing: '0.06em',
+              borderColor: accentColor,
+              color: '#f0e2c0',
+              background: `linear-gradient(135deg, ${accentColor}33, rgba(0,0,0,0.8))`,
+              whiteSpace: 'nowrap',
+            }}
+            onClick={(e) => { e.stopPropagation(); onChoose(); }}
+          >
+            I am {name}
+          </button>
         </div>
       </div>
-
-      {/* Description */}
-      <p className="font-fell italic text-xs text-stone-500 text-center leading-relaxed">
-        {description}
-      </p>
-
-      {/* Choose button */}
-      <button
-        className="font-cinzel text-xs font-bold tracking-widest uppercase px-4 py-2 rounded border transition-all duration-200 hover:scale-105 w-full"
-        style={{
-          borderColor: accentColor,
-          color: '#f0e2c0',
-          background: `linear-gradient(135deg, ${accentColor}33, rgba(0,0,0,0.8))`,
-        }}
-        onClick={(e) => { e.stopPropagation(); onChoose(); }}
-      >
-        I am {name.split(' ')[0]}
-      </button>
     </div>
   );
 }

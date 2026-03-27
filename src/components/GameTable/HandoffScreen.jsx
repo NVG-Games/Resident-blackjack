@@ -60,15 +60,16 @@ export default function HandoffScreen({ toPlayerName, onReady }) {
 
         {/* Message */}
         <div>
-          <div className="font-fell italic text-stone-500 text-sm tracking-[0.3em] uppercase mb-3">
-            Hot-Seat Mode
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#c4b9a8', letterSpacing: '0.2em', textTransform: 'uppercase', marginBottom: 12 }}>
+            Local Duel
           </div>
-          <h2 className="font-cinzel font-bold text-2xl tracking-wide" style={{ color: '#f0e2c0' }}>
+          <h2 className="font-cinzel font-bold tracking-wide" style={{ fontSize: 32, color: '#f0e2c0' }}>
             Pass the device to
           </h2>
           <div
-            className="player-name font-cinzel font-black text-4xl mt-2 tracking-wider"
+            className="player-name font-cinzel font-black mt-2 tracking-wider"
             style={{
+              fontSize: 52,
               color: '#f5c842',
               textShadow: '0 0 15px rgba(245,158,11,0.6)',
             }}
@@ -85,7 +86,7 @@ export default function HandoffScreen({ toPlayerName, onReady }) {
         </div>
 
         {/* Hint */}
-        <p className="font-fell italic text-stone-500 text-sm leading-relaxed">
+        <p style={{ fontFamily: 'Cinzel, serif', fontSize: 22, color: '#c4b9a8', lineHeight: 1.6 }}>
           Look away while your opponent takes their turn.
           <br />
           Press the button when you are ready.
@@ -95,10 +96,11 @@ export default function HandoffScreen({ toPlayerName, onReady }) {
         <button
           ref={btnRef}
           onClick={handleReady}
-          className="font-cinzel text-base font-bold tracking-[0.3em] uppercase
-            px-12 py-4 rounded border-2 transition-all duration-200
+          className="font-cinzel font-bold tracking-[0.2em] uppercase
+            px-12 py-5 rounded border-2 transition-all duration-200
             hover:scale-105 active:scale-95"
           style={{
+            fontSize: 24,
             borderColor: '#b8880a',
             color: '#f0e2c0',
             background: 'linear-gradient(135deg, rgba(184,136,10,0.2), rgba(0,0,0,0.8))',

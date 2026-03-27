@@ -5,44 +5,44 @@ import { PHASES } from '../../engine/constants.js';
 const PHASE_VISUALS = {
   FINGER: {
     icon: '✂',
-    color: '#8b0000',
-    glow: 'rgba(139,0,0,0.6)',
-    borderColor: '#6b0000',
-    subtitle: 'Fingers on the table, Clancy.',
+    color: '#1c1410',
+    glow: 'rgba(232,213,176,0.04)',
+    borderColor: 'rgba(255,209,82,0.18)',
+    subtitle: 'No trump cards. Count carefully.',
   },
   SHOCK: {
     icon: '⚡',
-    color: '#1a3a8b',
-    glow: 'rgba(26,58,139,0.6)',
-    borderColor: '#1a3a8b',
-    subtitle: 'Lucas introduces new rules.',
+    color: '#0c1018',
+    glow: 'rgba(100,180,255,0.04)',
+    borderColor: 'rgba(100,180,255,0.15)',
+    subtitle: 'Trump cards are now in play.',
   },
   SAW: {
     icon: '⚙',
-    color: '#4a2200',
-    glow: 'rgba(139,60,0,0.6)',
-    borderColor: '#6b3300',
+    color: '#180c06',
+    glow: 'rgba(255,120,60,0.04)',
+    borderColor: 'rgba(255,120,60,0.15)',
     subtitle: 'One of you won\'t leave this room.',
   },
   victory: {
-    icon: '☉',
-    color: '#1a4a00',
-    glow: 'rgba(20,100,0,0.5)',
-    borderColor: '#2a6b00',
+    icon: '✦',
+    color: '#0e0c08',
+    glow: 'rgba(255,209,82,0.06)',
+    borderColor: 'rgba(255,209,82,0.25)',
     subtitle: '',
   },
   defeat: {
-    icon: '☠',
-    color: '#4a0000',
-    glow: 'rgba(100,0,0,0.7)',
-    borderColor: '#6b0000',
+    icon: '✕',
+    color: '#120808',
+    glow: 'rgba(229,115,115,0.05)',
+    borderColor: 'rgba(229,115,115,0.2)',
     subtitle: '',
   },
   oblivion: {
     icon: '∅',
-    color: '#1a1a2e',
-    glow: 'rgba(20,20,80,0.5)',
-    borderColor: '#2a2a5e',
+    color: '#0c0c10',
+    glow: 'rgba(0,0,0,0)',
+    borderColor: 'rgba(255,209,82,0.1)',
     subtitle: '',
   },
 };
@@ -86,65 +86,64 @@ export default function PhaseOverlay({ overlay, onDismiss }) {
     >
       <div
         ref={contentRef}
-        className="relative flex flex-col items-center gap-6 p-12 rounded-lg max-w-lg w-full mx-4"
+        className="relative flex flex-col items-center mx-4"
         style={{
-          background: `radial-gradient(ellipse at center, ${visual.color}22, #000000dd)`,
-          border: `2px solid ${visual.borderColor}`,
-          boxShadow: `0 0 60px ${visual.glow}, 0 0 120px ${visual.glow}44, inset 0 0 40px rgba(0,0,0,0.8)`,
+          gap: 20,
+          padding: '40px 32px 32px',
+          borderRadius: 8,
+          maxWidth: 360,
+          width: '100%',
+          background: `linear-gradient(160deg, ${visual.color}, #080604)`,
+          border: `1px solid ${visual.borderColor}`,
+          boxShadow: `0 0 80px rgba(0,0,0,0.98), inset 0 0 40px rgba(0,0,0,0.6)`,
         }}
       >
         {/* Corner ornaments */}
-        <div className="absolute top-3 left-3 text-stone-700 text-xs">✦</div>
-        <div className="absolute top-3 right-3 text-stone-700 text-xs">✦</div>
-        <div className="absolute bottom-3 left-3 text-stone-700 text-xs">✦</div>
-        <div className="absolute bottom-3 right-3 text-stone-700 text-xs">✦</div>
+        <div className="absolute top-3 left-3" style={{ color: 'rgba(255,209,82,0.2)', fontSize: 10 }}>✦</div>
+        <div className="absolute top-3 right-3" style={{ color: 'rgba(255,209,82,0.2)', fontSize: 10 }}>✦</div>
+        <div className="absolute bottom-3 left-3" style={{ color: 'rgba(255,209,82,0.2)', fontSize: 10 }}>✦</div>
+        <div className="absolute bottom-3 right-3" style={{ color: 'rgba(255,209,82,0.2)', fontSize: 10 }}>✦</div>
 
         {/* Phase icon */}
-        <div className="text-6xl animate-flicker" style={{ color: visual.color, filter: `drop-shadow(0 0 20px ${visual.glow})` }}>
+        <div style={{ fontSize: 48, color: '#e8d5b0', opacity: 0.5, lineHeight: 1 }}>
           {visual.icon}
         </div>
 
         {/* Main title */}
-        <div className="text-center">
-          <h1 className="font-cinzel text-4xl font-black tracking-widest"
-            style={{
-              color: '#f0e2c0',
-              textShadow: `0 0 30px ${visual.glow}, 2px 2px 4px rgba(0,0,0,0.9)`,
-              letterSpacing: '0.3em',
-            }}>
-            {overlay.message}
-          </h1>
+        <h1 className="font-cinzel font-black text-center"
+          style={{
+            fontSize: 36,
+            color: '#e8d5b0',
+            letterSpacing: '0.25em',
+            textShadow: '0 2px 8px rgba(0,0,0,0.9)',
+            lineHeight: 1.2,
+          }}>
+          {overlay.message}
+        </h1>
 
-          {visual.subtitle && (
-            <p className="font-fell italic text-stone-400 text-sm mt-2">
-              {visual.subtitle}
-            </p>
-          )}
-        </div>
-
-        {/* Sub message */}
-        {overlay.subMessage && (
-          <p className="font-fell italic text-stone-300 text-center text-base leading-relaxed max-w-sm">
-            "{overlay.subMessage}"
+        {/* Subtitle — one line only, no subMessage duplication */}
+        {visual.subtitle && (
+          <p style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#7a6a50', textAlign: 'center', lineHeight: 1.5 }}>
+            {visual.subtitle}
           </p>
         )}
 
         {/* Divider */}
-        <div className="w-48 h-px" style={{ background: `linear-gradient(90deg, transparent, ${visual.borderColor}, transparent)` }} />
+        <div style={{ width: 80, height: 1, background: 'linear-gradient(90deg, transparent, rgba(255,209,82,0.2), transparent)' }} />
 
         {isEndScreen ? (
           <button
             onClick={onDismiss}
-            className="font-cinzel text-sm tracking-widest uppercase px-8 py-3 rounded
-              border border-stone-700 text-stone-300 hover:text-amber-300
-              hover:border-amber-700 transition-all duration-300"
-            style={{ background: 'rgba(0,0,0,0.6)' }}
+            className="font-cinzel uppercase rounded border transition-all duration-300"
+            style={{ fontSize: 20, padding: '14px 40px', letterSpacing: '0.12em', background: 'rgba(0,0,0,0.6)', borderColor: 'rgba(255,209,82,0.3)', color: '#e8d5b0' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,209,82,0.7)'; e.currentTarget.style.color = '#ffd152'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,209,82,0.3)'; e.currentTarget.style.color = '#e8d5b0'; }}
           >
             Play Again
           </button>
         ) : (
-          <p className="text-stone-600 text-xs font-fell italic animate-pulse">
-            Click anywhere to continue...
+          <p className="animate-pulse" style={{ fontFamily: 'Cinzel, serif', fontSize: 16, color: '#5a5040', letterSpacing: '0.05em' }}>
+            Tap to continue
           </p>
         )}
       </div>

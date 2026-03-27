@@ -3,7 +3,6 @@ import { gsap } from 'gsap';
 import { getEffectiveTarget, computeBetModifiers } from '../../engine/trumpEngine.js';
 import { getHandTotal } from '../../engine/deck.js';
 
-// isGuestOnline: online guest (Hoffman) — swap "You"/"Him" labels and health values
 export default function BetPanel({ state, isGuestOnline = false }) {
   const {
     playerBet, botBet, phase, roundNumber,
@@ -24,14 +23,11 @@ export default function BetPanel({ state, isGuestOnline = false }) {
   const effectivePlayerBet = Math.max(0, playerBet + playerBetMod);
   const effectiveBotBet = Math.max(0, botBet + botBetMod);
 
-  // Guest's "You" = botHealth (Hoffman), "Him" = playerHealth (Clancy/host)
   const myHealth = isGuestOnline ? botHealth : playerHealth;
   const theirHealth = isGuestOnline ? playerHealth : botHealth;
   const myBet = isGuestOnline ? effectiveBotBet : effectivePlayerBet;
-  const myBetBase = isGuestOnline ? botBet : playerBet;
   const myBetMod = isGuestOnline ? botBetMod : playerBetMod;
   const theirBet = isGuestOnline ? effectivePlayerBet : effectiveBotBet;
-  const theirBetBase = isGuestOnline ? playerBet : botBet;
   const theirBetMod = isGuestOnline ? playerBetMod : botBetMod;
 
   const targetRef = useRef(null);
@@ -41,90 +37,57 @@ export default function BetPanel({ state, isGuestOnline = false }) {
     if (prevTarget.current !== target && targetRef.current) {
       gsap.fromTo(targetRef.current,
         { scale: 1.5, color: '#ef4444' },
-        { scale: 1, color: '#fbbf24', duration: 0.5, ease: 'back.out(2)' }
+        { scale: 1, color: '#ffd152', duration: 0.5, ease: 'back.out(2)' }
       );
     }
     prevTarget.current = target;
   }, [target]);
 
-  const phaseColors = {
-    FINGER: 'text-red-400',
-    SHOCK: 'text-blue-400',
-    SAW: 'text-orange-400',
-  };
+  const phaseColors = { FINGER: '#e57373', SHOCK: '#64b5f6', SAW: '#ff8a50' };
+  const phaseColor = phaseColors[phase] || '#e8d5b0';
+
+  const cell = { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, flexShrink: 0 };
+  const label = { fontFamily: 'Cinzel, serif', fontSize: 10, color: '#5a5040', letterSpacing: '0.15em', textTransform: 'uppercase' };
+  const value = { fontFamily: 'Cinzel, serif', fontWeight: 700, lineHeight: 1 };
+  const divider = { width: 1, alignSelf: 'stretch', background: 'rgba(255,209,82,0.08)', margin: '0 12px' };
 
   return (
-    <div className="flex flex-col items-center gap-1 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2
-      bg-black/40 rounded-lg border border-stone-800 backdrop-blur-sm w-full max-w-xs sm:max-w-none sm:w-auto">
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '8px 16px',
+      background: 'rgba(0,0,0,0.45)',
+      borderTop: '1px solid rgba(255,209,82,0.07)',
+      borderBottom: '1px solid rgba(255,209,82,0.07)',
+      width: '100%',
+      boxSizing: 'border-box',
+      gap: 0,
+    }}>
 
-      {/* Phase indicator */}
-      <div className={`font-cinzel text-xs font-bold tracking-widest uppercase ${phaseColors[phase] || 'text-stone-400'}`}>
-        {phase.replace('_', ' ')} · R{roundNumber}
+      {/* Phase */}
+      <div style={cell}>
+        <span style={label}>Phase</span>
+        <span style={{ ...value, fontSize: 18, color: phaseColor, letterSpacing: '0.08em' }}>{phase}</span>
       </div>
 
-      {/* Health score — main scoreboard */}
-      <div className="flex items-center gap-2 sm:gap-3">
-        <span className="font-cinzel font-black text-amber-300" style={{ fontSize: '1.1rem' }}>{myHealth}</span>
-        <span className="text-stone-600 font-fell text-xs">❤ You</span>
-        <span className="text-stone-700 font-cinzel text-sm font-bold">vs</span>
-        <span className="text-stone-600 font-fell text-xs">Him ❤</span>
-        <span className="font-cinzel font-black text-red-400" style={{ fontSize: '1.1rem' }}>{theirHealth}</span>
+      <div style={divider} />
+
+      {/* Round */}
+      <div style={cell}>
+        <span style={label}>Round</span>
+        <span style={{ ...value, fontSize: 18, color: '#c4b9a8' }}>{roundNumber} / 3</span>
       </div>
 
-      {/* Target + Stakes */}
-      <div className="flex items-center gap-3 sm:gap-6">
-        <div className="flex flex-col items-center">
-          <span className="text-stone-600 font-fell text-xs italic">target</span>
-          <span ref={targetRef} className="font-cinzel text-xl sm:text-2xl font-bold text-amber-300">
-            {target}
-          </span>
-        </div>
-        <div className="w-px h-8 bg-stone-700" />
-        <div className="flex flex-col items-center">
-          <span className="text-stone-600 font-fell text-xs italic">loser pays</span>
-          <div className="flex items-center gap-1.5">
-            <BetDisplay label="You" bet={myBet} base={myBetBase} mod={myBetMod} color="amber" compact />
-            <span className="text-stone-700 font-cinzel text-xs">/</span>
-            <BetDisplay label="Him" bet={theirBet} base={theirBetBase} mod={theirBetMod} color="red" compact />
-          </div>
-        </div>
+      <div style={divider} />
+
+      {/* Target */}
+      <div style={cell}>
+        <span style={label}>Target</span>
+        <span ref={targetRef} style={{ ...value, fontSize: 22, color: '#ffd152' }}>{target}</span>
       </div>
-    </div>
-  );
-}
 
-function BetDisplay({ label, bet, base, mod, color, compact = false }) {
-  const betRef = useRef(null);
-  const prevBet = useRef(bet);
 
-  useEffect(() => {
-    if (prevBet.current !== bet && betRef.current) {
-      gsap.fromTo(betRef.current,
-        { y: -8, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out' }
-      );
-    }
-    prevBet.current = bet;
-  }, [bet]);
-
-  const colorMap = {
-    amber: { base: 'text-amber-300', mod: 'text-red-400', label: 'text-amber-500' },
-    red: { base: 'text-red-300', mod: 'text-red-400', label: 'text-red-500' },
-  };
-  const colors = colorMap[color];
-
-  return (
-    <div className="flex flex-col items-center">
-      <span className={`text-xs font-cinzel ${colors.label} tracking-wide`}>{label}</span>
-      <div ref={betRef} className={`font-cinzel font-bold ${colors.base} ${compact ? 'text-lg' : 'text-xl'}`}>
-        {bet}
-        {mod !== 0 && (
-          <span className={`text-xs ml-1 ${colors.mod}`}>
-            ({mod > 0 ? '+' : ''}{mod})
-          </span>
-        )}
-      </div>
-      {!compact && <span className="text-xs text-stone-600 font-fell">health pts</span>}
     </div>
   );
 }
