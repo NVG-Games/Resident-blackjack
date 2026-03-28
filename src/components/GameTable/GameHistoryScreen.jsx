@@ -107,13 +107,13 @@ function HistoryEntry({ entry, idx }) {
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#c4b9a8', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {myName} <span style={{ color: '#5a5040', fontWeight: 400 }}>vs</span> {opponentName}
           </div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#5a5040', letterSpacing: '0.06em', marginTop: 2 }}>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#8a7a60', letterSpacing: '0.06em', marginTop: 2 }}>
             {MODE_LABELS[mode] || mode}
             {finalPhase && <span style={{ marginLeft: 6 }}>· {PHASE_LABELS[finalPhase] || finalPhase} phase</span>}
             {totalRounds > 0 && <span style={{ marginLeft: 6 }}>· {totalRounds} round{totalRounds !== 1 ? 's' : ''}</span>}
           </div>
         </div>
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#3a3428', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 11, color: '#7a6a50', textAlign: 'right', whiteSpace: 'nowrap', flexShrink: 0 }}>
           {formatDate(date)}
         </div>
       </div>
@@ -121,15 +121,15 @@ function HistoryEntry({ entry, idx }) {
       {/* Bottom row: HP bars */}
       <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#4a4030', letterSpacing: '0.08em' }}>YOU</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#8a7a60', letterSpacing: '0.08em' }}>YOU</div>
           <HPBar value={myFinalHP} color="amber" />
         </div>
-        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#4a4030' }}>vs</div>
+        <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#7a6a50' }}>vs</div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#4a4030', letterSpacing: '0.08em' }}>OPP</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#8a7a60', letterSpacing: '0.08em' }}>OPP</div>
           <HPBar value={opponentFinalHP} color="red" />
         </div>
-        <div style={{ flex: 1, textAlign: 'right', fontFamily: 'Cinzel, serif', fontSize: 12, color: '#3a3428' }}>
+        <div style={{ flex: 1, textAlign: 'right', fontFamily: 'Cinzel, serif', fontSize: 12, color: '#9a8a70' }}>
           {myFinalHP} — {opponentFinalHP} HP
         </div>
       </div>
@@ -169,7 +169,7 @@ function StatsBar({ history }) {
           borderRight: i < arr.length - 1 ? '1px solid rgba(255,209,82,0.06)' : 'none',
         }}>
           <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 18, color: s.color, lineHeight: 1 }}>{s.value}</div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#3a3428', letterSpacing: '0.08em', marginTop: 3 }}>{s.label}</div>
+          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 10, color: '#8a7a60', letterSpacing: '0.08em', marginTop: 3 }}>{s.label}</div>
         </div>
       ))}
     </div>
@@ -252,7 +252,7 @@ export default function GameHistoryScreen({ history, onBack, onClearHistory }) {
             style={{
               fontFamily: 'Cinzel, serif',
               fontSize: 12,
-              color: confirmClear ? '#ef4444' : '#3a3428',
+              color: confirmClear ? '#ef4444' : '#7a6a50',
               background: 'none',
               border: `1px solid ${confirmClear ? 'rgba(239,68,68,0.4)' : 'rgba(255,255,255,0.06)'}`,
               borderRadius: 4,
@@ -288,10 +288,10 @@ export default function GameHistoryScreen({ history, onBack, onClearHistory }) {
             gap: 16,
           }}>
             <div style={{ fontSize: 48, opacity: 0.15 }}>🃏</div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#3a3428', letterSpacing: '0.12em', textAlign: 'center' }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 18, color: '#7a6a50', letterSpacing: '0.12em', textAlign: 'center' }}>
               No games played yet
             </div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#2a2420', textAlign: 'center', maxWidth: 240, lineHeight: 1.6 }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#6a5a40', textAlign: 'center', maxWidth: 240, lineHeight: 1.6 }}>
               Complete a game to see it recorded here
             </div>
           </div>

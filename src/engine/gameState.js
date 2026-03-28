@@ -53,6 +53,7 @@ export function createInitialState() {
     overlay: null,     // { type, message, subMessage }
     winner: null,      // 'player' | 'bot' | null
     roundResult: null, // { winner, playerTotal, botTotal, target }
+    roundHistory: [],  // [{ phase, roundNumber, winner, playerTotal, botTotal, target, playerBet, botBet }]
     trumpsUsedThisTurn: 0,  // for Mind Shift tracking
     botTrumpsUsedThisTurn: 0,
     playerTrumpsUsedTotal: 0,
@@ -60,6 +61,7 @@ export function createInitialState() {
     gameOver: false,
     lastInstantTrump: null,  // { trump, owner: 'player'|'bot' } — shown briefly after instant trump use
     lastPlayedTrump: null,   // { trump, owner: 'player'|'bot' } — any trump played, for banner display
+    trumpWarning: null,      // string | null — shown as a toast when a trump effect partially failed
   };
 }
 
@@ -144,6 +146,7 @@ export function gameReducer(state, action) {
         botTrumpsUsedThisTurn: 0,
         lastInstantTrump: null,
         lastPlayedTrump: null,
+        trumpWarning: null,
       };
     }
 
@@ -212,6 +215,7 @@ export function gameReducer(state, action) {
         botBet: state.botBet + (result.botBetDelta ?? 0),
         lastInstantTrump: isInstant ? { trump, owner: 'player' } : state.lastInstantTrump,
         lastPlayedTrump: { trump, owner: 'player' },
+        trumpWarning: result.trumpWarning ?? null,
       };
 
       // Mind Shift removal check
@@ -290,6 +294,7 @@ export function gameReducer(state, action) {
           botBet: state.botBet + (result.botBetDelta ?? 0),
           lastInstantTrump: isInstant ? { trump, owner: 'bot' } : state.lastInstantTrump,
           lastPlayedTrump: { trump, owner: 'bot' },
+          trumpWarning: result.trumpWarning ?? null,
         };
       }
 
@@ -366,14 +371,27 @@ export function gameReducer(state, action) {
           ? `Hoffman wins the round. You lose ${effectivePlayerBet} health.`
           : `Draw — both suffer!`;
 
+      const historyEntry = {
+        phase: state.phase,
+        roundNumber: state.roundNumber,
+        winner: roundWinner,
+        playerTotal,
+        botTotal,
+        target,
+        playerBet: effectivePlayerBet,
+        botBet: effectiveBotBet,
+      };
+
       return {
         ...mindShiftedState,
         roundState: ROUND_STATE.ROUND_OVER,
         roundResult: { winner: roundWinner, playerTotal, botTotal, target, effectivePlayerBet, effectiveBotBet },
+        roundHistory: [...(mindShiftedState.roundHistory || []), historyEntry],
         gameOver,
         winner: gameWinner,
         lastInstantTrump: null,
         lastPlayedTrump: null,
+        trumpWarning: null,
         log: [...mindShiftedState.log, { msg: resultMsg, time: Date.now() }],
         // No overlay here — GameTable shows RoundResult first ("See Final Result →"),
         // then reveals victory/defeat overlay via finalRoundSeen / SHOW_FINAL_OVERLAY.
@@ -455,6 +473,9 @@ export function gameReducer(state, action) {
           subMessage: w === 'player'
             ? 'Hoffman\'s saw blade stops. Lucas sneers. The game is over.'
             : 'The saw inches forward. Darkness takes you.',
+          roundHistory: state.roundHistory,
+          finalPlayerHealth: state.playerHealth,
+          finalBotHealth: state.botHealth,
         },
       };
     }

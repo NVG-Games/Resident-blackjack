@@ -3,28 +3,30 @@
  *
  * Priority:
  *   1. Telegram user (first_name + last_name)
- *   2. localStorage value saved from manual entry
+ *   2. Capacitor Preferences value saved from manual entry
  *   3. null (caller should prompt)
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
+import { Preferences } from '@capacitor/preferences';
 import { useTelegram } from './useTelegram.js';
 
 const LS_KEY = 'rj_player_name';
 const MAX_NAME_LEN = 32;
 
-export function getStoredName() {
+export async function getStoredName() {
   try {
-    return localStorage.getItem(LS_KEY) || null;
+    const { value } = await Preferences.get({ key: LS_KEY });
+    return value || null;
   } catch {
     return null;
   }
 }
 
-export function saveStoredName(name) {
+export async function saveStoredName(name) {
   try {
     const trimmed = name.trim().slice(0, MAX_NAME_LEN);
-    if (trimmed) localStorage.setItem(LS_KEY, trimmed);
+    if (trimmed) await Preferences.set({ key: LS_KEY, value: trimmed });
     return trimmed;
   } catch {
     return name.trim().slice(0, MAX_NAME_LEN);
@@ -38,12 +40,18 @@ export function usePlayerName() {
     ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ').slice(0, MAX_NAME_LEN)
     : null;
 
-  const [localName, setLocalName] = useState(() => getStoredName());
+  const [localName, setLocalName] = useState(null);
+
+  useEffect(() => {
+    getStoredName().then((stored) => {
+      if (stored) setLocalName(stored);
+    });
+  }, []);
 
   const resolvedName = tgName || localName;
 
-  const saveName = useCallback((name) => {
-    const saved = saveStoredName(name);
+  const saveName = useCallback(async (name) => {
+    const saved = await saveStoredName(name);
     setLocalName(saved);
     return saved;
   }, []);

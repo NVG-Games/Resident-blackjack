@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { gsap } from 'gsap';
 
 const EMOJIS = [
-  '😤', '💀', '😈', '🤡', '😱',
+  '😂', '😤', '💀', '😈', '🤡', '😱',
   '👊', '🔥', '❄️', '🫡', '🤝',
-  '😭', '😂', '🗿', '💅', '👀',
+  '😭', '🗿', '💅', '👀',
 ];
 
 const DISPLAY_DURATION_MS = 2800;

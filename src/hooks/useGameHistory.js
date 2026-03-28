@@ -1,20 +1,21 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+import { Preferences } from '@capacitor/preferences';
 
 const STORAGE_KEY = 're7_game_history';
 const MAX_ENTRIES = 50;
 
-function loadHistory() {
+async function loadHistory() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    const { value } = await Preferences.get({ key: STORAGE_KEY });
+    return value ? JSON.parse(value) : [];
   } catch {
     return [];
   }
 }
 
-function saveHistory(entries) {
+async function saveHistory(entries) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+    await Preferences.set({ key: STORAGE_KEY, value: JSON.stringify(entries) });
   } catch {
     // storage full or denied — silent fail
   }
@@ -37,7 +38,11 @@ function saveHistory(entries) {
  */
 
 export function useGameHistory() {
-  const [history, setHistory] = useState(() => loadHistory());
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    loadHistory().then((entries) => setHistory(entries));
+  }, []);
 
   const recordGame = useCallback((record) => {
     const entry = {
@@ -52,8 +57,8 @@ export function useGameHistory() {
     });
   }, []);
 
-  const clearHistory = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
+  const clearHistory = useCallback(async () => {
+    await Preferences.remove({ key: STORAGE_KEY });
     setHistory([]);
   }, []);
 

@@ -109,6 +109,7 @@ export function applyTrump(trump, state, owner) {
   let newLog = [...log];
   let cancelRound = false;
   let escapeTrigger = false;
+  let trumpWarning = null; // set when trump effect partially failed (e.g. card not in deck)
   let deadSilenceActive = false;
   let oppBetDelta = 0; // immediate one-time bet modifier applied to opponent's current bet
 
@@ -277,6 +278,7 @@ export function applyTrump(trump, state, owner) {
         addLog(`${isPlayer ? 'You draw' : 'Hoffman draws'} the ${cardValue}!`);
       } else {
         addLog(`The ${cardValue} is no longer in the deck... it must be the hidden card.`);
+        trumpWarning = `The ${cardValue} card isn't in the deck — it's probably the hidden card!`;
       }
       // Harvest effect
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
@@ -447,6 +449,7 @@ export function applyTrump(trump, state, owner) {
     log: newLog,
     cancelRound,
     escapeTrigger,
+    trumpWarning,
     // oppBetDelta: immediate one-time raise on opponent's current bet (e.g. Shield Assault)
     playerBetDelta: isPlayer ? 0 : oppBetDelta,
     botBetDelta: isPlayer ? oppBetDelta : 0,

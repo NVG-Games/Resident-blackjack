@@ -42,7 +42,7 @@ export default function TableTrumps({ playerTableTrumps, botTableTrumps, lastIns
 
   return (
     <div className="flex gap-6 items-start justify-center">
-      {(theirTrumps.length > 0 || (flashEntry && flashIsTheirSide)) && (
+      {(theirTrumps.length > 0 || (flashEntry && flashIsTheirSide && !flashEntry.fading)) && (
         <TrumpSection
           label={theirLabel}
           trumps={theirTrumps}
@@ -50,7 +50,7 @@ export default function TableTrumps({ playerTableTrumps, botTableTrumps, lastIns
           flashEntry={flashIsTheirSide ? flashEntry : null}
         />
       )}
-      {(myTrumps.length > 0 || (flashEntry && flashIsMySide)) && (
+      {(myTrumps.length > 0 || (flashEntry && flashIsMySide && !flashEntry.fading)) && (
         <TrumpSection
           label="Your Table"
           trumps={myTrumps}
@@ -63,9 +63,11 @@ export default function TableTrumps({ playerTableTrumps, botTableTrumps, lastIns
 }
 
 function TrumpSection({ label, trumps, side, flashEntry }) {
+  // Hide the label when the only thing shown is a fading flash card (no permanent trumps)
+  const showLabel = trumps.length > 0 || (flashEntry && !flashEntry.fading);
   return (
     <div className="flex flex-col items-center gap-1">
-      <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: side === 'bot' ? '#f87171' : '#fbbf24' }}>{label}</span>
+      {showLabel && <span style={{ fontFamily: 'Cinzel, serif', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.12em', color: side === 'bot' ? '#f87171' : '#fbbf24' }}>{label}</span>}
       <div className="flex gap-1 flex-wrap justify-center">
         {trumps.map(trump => (
           <TrumpCard
