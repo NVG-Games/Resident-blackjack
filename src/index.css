@@ -27,8 +27,9 @@
     font-family: 'Cinzel', serif;
     color: #f5e6c8;
     -webkit-font-smoothing: antialiased;
-    touch-action: manipulation;
     overscroll-behavior: none;
+    /* Allow touch scroll to propagate into overflow:auto children */
+    touch-action: pan-y;
   }
 
   /* Prevent text selection on game UI elements */
@@ -36,6 +37,12 @@
     touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
+  }
+
+  /* All scrollable containers must work on mobile browsers */
+  [data-scroll] {
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
   }
 }
 

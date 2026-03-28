@@ -110,11 +110,27 @@ export function applyTrump(trump, state, owner) {
   let cancelRound = false;
   let escapeTrigger = false;
   let deadSilenceActive = false;
+  let oppBetDelta = 0; // immediate one-time bet modifier applied to opponent's current bet
 
   const addLog = (msg) => newLog.push({ msg, time: Date.now() });
 
-  // Check if opponent is blocked by Destroy++
-  const opponentBlocked = oppTableTrumps.some(t => t.type === TRUMP_TYPES.DESTROY_PLUS_PLUS);
+  // Check if the current user is blocked by opponent's Destroy++
+  const isBlocked = oppTableTrumps.some(t => t.type === TRUMP_TYPES.DESTROY_PLUS_PLUS);
+  if (isBlocked) {
+    // Return state unchanged — trump use was blocked
+    return {
+      deck: newDeck,
+      playerHand: isPlayer ? newMyHand : newOppHand,
+      botHand: isPlayer ? newOppHand : newMyHand,
+      playerTableTrumps: isPlayer ? newMyTableTrumps : newOppTableTrumps,
+      botTableTrumps: isPlayer ? newOppTableTrumps : newMyTableTrumps,
+      playerTrumpHand: isPlayer ? myHeld : newOppHeld,
+      botTrumpHand: isPlayer ? newOppHeld : myHeld,
+      log: [...newLog, { msg: `${isPlayer ? 'You' : 'Hoffman'} cannot use trumps — Destroy++ blocks it!`, time: Date.now() }],
+      cancelRound: false,
+      escapeTrigger: false,
+    };
+  }
 
   // Check dead silence on opponent
   const myDeadSilenced = myTableTrumps.some(t => t.type === TRUMP_TYPES.DEAD_SILENCE) && !isPlayer;
@@ -349,9 +365,7 @@ export function applyTrump(trump, state, owner) {
         newDeck = remaining;
         addLog(`${isPlayer ? 'Perfect Draw+!' : 'Hoffman\'s Perfect Draw+!'} Drew ${card.value}. Stakes raised!`);
       }
-      if (newMyTableTrumps.length < MAX_TABLE_TRUMPS) {
-        newMyTableTrumps.push({ ...trump, owner });
-      }
+      // Note: already placed on table by the permanent-trump block above — no double-push needed
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
         newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
       }
@@ -382,7 +396,7 @@ export function applyTrump(trump, state, owner) {
         const { card, remaining } = drawSpecificCard(newDeck, highest.value);
         newOppHand = [...newOppHand, card];
         newDeck = remaining;
-        addLog(`Curse! Hoffman is forced to take the ${card.value}!`);
+        addLog(`Curse! ${isPlayer ? 'Hoffman' : 'You'} ${isPlayer ? 'is' : 'are'} forced to take the ${card.value}!`);
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
         newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
@@ -406,14 +420,16 @@ export function applyTrump(trump, state, owner) {
       const shields = newMyTableTrumps.filter(t => [TRUMP_TYPES.SHIELD, TRUMP_TYPES.SHIELD_PLUS].includes(t.type));
       const toRemove = shields.slice(0, 3).map(s => s.id);
       newMyTableTrumps = newMyTableTrumps.filter(t => !toRemove.includes(t.id));
-      addLog(`Shield Assault! ${toRemove.length} shield(s) destroyed.`);
+      oppBetDelta += 3;
+      addLog(`Shield Assault! ${toRemove.length} shield(s) destroyed. Opponent's bet +3!`);
       break;
     }
     case TRUMP_TYPES.SHIELD_ASSAULT_PLUS: {
       const shields = newMyTableTrumps.filter(t => [TRUMP_TYPES.SHIELD, TRUMP_TYPES.SHIELD_PLUS].includes(t.type));
       const toRemove = shields.slice(0, 2).map(s => s.id);
       newMyTableTrumps = newMyTableTrumps.filter(t => !toRemove.includes(t.id));
-      addLog(`Shield Assault+! ${toRemove.length} shield(s) obliterated.`);
+      oppBetDelta += 5;
+      addLog(`Shield Assault+! ${toRemove.length} shield(s) obliterated. Opponent's bet +5!`);
       break;
     }
     default:
@@ -431,6 +447,9 @@ export function applyTrump(trump, state, owner) {
     log: newLog,
     cancelRound,
     escapeTrigger,
+    // oppBetDelta: immediate one-time raise on opponent's current bet (e.g. Shield Assault)
+    playerBetDelta: isPlayer ? 0 : oppBetDelta,
+    botBetDelta: isPlayer ? oppBetDelta : 0,
   };
 }
 

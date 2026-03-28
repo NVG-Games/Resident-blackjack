@@ -207,6 +207,11 @@ export function getBotDecision(state) {
     return { type: 'stand' };
   }
 
+  // Dead Silence blocks drawing — must stand
+  if (state.playerTableTrumps.some(t => t.type === TRUMP_TYPES.DEAD_SILENCE)) {
+    return { type: 'stand' };
+  }
+
   // If we're behind and player seems safe — take risks, hit even with moderate bust chance
   if (weAreBehind && bustChance < 0.65) {
     return { type: 'hit' };
@@ -226,11 +231,6 @@ export function getBotDecision(state) {
     ].includes(trump.type)) {
       return { type: 'trump', trump };
     }
-    return { type: 'stand' };
-  }
-
-  // Check dead silence
-  if (state.playerTableTrumps.some(t => t.type === TRUMP_TYPES.DEAD_SILENCE)) {
     return { type: 'stand' };
   }
 

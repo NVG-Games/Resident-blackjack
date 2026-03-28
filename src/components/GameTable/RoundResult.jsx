@@ -5,7 +5,7 @@ import Card from '../Card/Card.jsx';
 const NEXT_ROUND_TIMEOUT_SEC = 20;
 
 // isGuestOnline: flip winner/scores perspective for the guest (Hoffman = bot slot in engine)
-export default function RoundResult({ result, onNext, state, isGuestOnline = false, isOnline = false, isHost = false, onHostTimeout }) {
+export default function RoundResult({ result, onNext, state, isGuestOnline = false, isOnline = false, isHost = false, onHostTimeout, isFinalRound = false }) {
   const ref = useRef(null);
   const [secsLeft, setSecsLeft] = useState(NEXT_ROUND_TIMEOUT_SEC);
 
@@ -59,7 +59,7 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
       style={{ backgroundColor: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(3px)' }}
     >
       <div className="flex flex-col items-center gap-3 rounded mx-3 w-full max-w-sm"
-        style={{ background: '#0c0a07', border: '1px solid rgba(255,209,82,0.12)', boxShadow: '0 0 60px rgba(0,0,0,0.97)', maxHeight: '92dvh', overflowY: 'auto' }}>
+        style={{ background: '#0c0a07', border: '1px solid rgba(255,209,82,0.12)', boxShadow: '0 0 60px rgba(0,0,0,0.97)', maxHeight: '92dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
 
         {/* Result title */}
         <div className="font-cinzel font-black tracking-widest pt-5 px-5"
@@ -103,23 +103,58 @@ export default function RoundResult({ result, onNext, state, isGuestOnline = fal
           <MiniHealth health={isGuestOnline ? state.playerHealth : state.botHealth} max={10} label="Opponent" color="red" />
         </div>
 
+        {/* Final round — show "Game Over" banner before the button */}
+        {isFinalRound && (
+          <div style={{ padding: '0 16px', width: '100%', boxSizing: 'border-box' }}>
+            <div style={{
+              background: isWin ? 'rgba(255,209,82,0.07)' : 'rgba(229,115,115,0.07)',
+              border: `1px solid ${isWin ? 'rgba(255,209,82,0.3)' : 'rgba(229,115,115,0.3)'}`,
+              borderRadius: 6,
+              padding: '12px 14px',
+              textAlign: 'center',
+              fontFamily: 'Cinzel, serif',
+              fontSize: 22,
+              fontWeight: 700,
+              letterSpacing: '0.15em',
+              textTransform: 'uppercase',
+              color: isWin ? '#ffd152' : '#e57373',
+            }}>
+              {isDraw ? '⚔ DRAW — GAME OVER' : isWin ? '✦ GAME OVER — YOU WIN' : '✕ GAME OVER — YOU LOSE'}
+            </div>
+          </div>
+        )}
+
         <div style={{ padding: '0 16px 16px', width: '100%', boxSizing: 'border-box' }}>
           {/* Online guest: waiting for host */}
           {isOnline && !isHost ? (
             <div style={{ textAlign: 'center', fontFamily: 'Cinzel, serif', padding: '14px 0', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontSize: 16, color: '#5a5040', letterSpacing: '0.08em' }}>Waiting for host…</span>
+              <span style={{ fontSize: 16, color: '#5a5040', letterSpacing: '0.08em' }}>{isFinalRound ? 'Game over. Waiting for host…' : 'Waiting for host…'}</span>
               <span style={{ fontSize: 13, color: secsLeft <= 5 ? '#ef4444' : '#3a3428', letterSpacing: '0.05em' }}>{secsLeft}s</span>
             </div>
           ) : (
-            /* Host or non-online: show Next Round button */
             <button
               onClick={onNext}
               className="font-cinzel uppercase rounded border active:scale-95 transition-all duration-300 w-full"
-              style={{ fontSize: 20, padding: '14px 24px', letterSpacing: '0.12em', background: 'rgba(255,209,82,0.06)', borderColor: 'rgba(255,209,82,0.3)', color: '#f0e2c0', position: 'relative' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.12)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.6)'; }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.06)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.3)'; }}
+              style={{
+                fontSize: 20,
+                padding: '14px 24px',
+                letterSpacing: '0.12em',
+                background: isFinalRound
+                  ? (isWin ? 'rgba(255,209,82,0.1)' : 'rgba(229,115,115,0.08)')
+                  : 'rgba(255,209,82,0.06)',
+                borderColor: isFinalRound
+                  ? (isWin ? 'rgba(255,209,82,0.5)' : 'rgba(229,115,115,0.4)')
+                  : 'rgba(255,209,82,0.3)',
+                color: isFinalRound ? (isWin ? '#ffd152' : '#f87171') : '#f0e2c0',
+                position: 'relative',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,209,82,0.16)'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.7)'; }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = isFinalRound ? (isWin ? 'rgba(255,209,82,0.1)' : 'rgba(229,115,115,0.08)') : 'rgba(255,209,82,0.06)';
+                e.currentTarget.style.borderColor = isFinalRound ? (isWin ? 'rgba(255,209,82,0.5)' : 'rgba(229,115,115,0.4)') : 'rgba(255,209,82,0.3)';
+              }}
             >
-              Next Round →
+              {isFinalRound ? 'See Final Result →' : 'Next Round →'}
               {isOnline && isHost && (
                 <span style={{ position: 'absolute', top: 6, right: 10, fontFamily: 'Cinzel, serif', fontSize: 12, color: secsLeft <= 5 ? '#ef4444' : '#5a5040' }}>
                   {secsLeft}s

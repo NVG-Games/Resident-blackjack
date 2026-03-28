@@ -2,8 +2,10 @@ import { getHandTotal } from '../../engine/deck.js';
 import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
+import { FloatingEmoji } from '../GameTable/EmojiReaction.jsx';
+import PlayerNameLabel from '../GameTable/PlayerNameLabel.jsx';
 
-export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false, hideHoleCard = false, flipForGuest = false, isActivePlayer = false }) {
+export default function BotArea({ state, isThinking, playerName = 'Hoffman', hideCards = false, hideHoleCard = false, flipForGuest = false, isActivePlayer = false, activeEmoji }) {
   const { botHand, playerHand, playerTableTrumps, botTableTrumps, botHealth, playerHealth, botStood, playerStood, roundState, suit = 'spades' } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
@@ -16,19 +18,23 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
   const showFaceDown = !hideHoleCard || isRoundOver;
   const total = getHandTotal(hand);
   const faceUpCards = hand.slice(1);
-  const isBust = total > target;
 
-  const scoreColor = isBust ? '#e57373' : '#e8d5b0';
+  const visibleTotal = showFaceDown ? total : getHandTotal(faceUpCards);
+  const visibleIsBust = visibleTotal > target;
+  const scoreColor = visibleIsBust ? '#e57373' : '#e8d5b0';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
 
       {/* Identity row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            {playerName}
-          </div>
+        <div style={{ position: 'relative', textAlign: 'center', maxWidth: 120 }}>
+          <FloatingEmoji emoji={activeEmoji} onDone={() => {}} />
+          <PlayerNameLabel
+            name={playerName}
+            maxChars={12}
+            style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: '#e8d5b0', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+          />
           <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#9c8e76', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
             {isActivePlayer ? 'You' : 'Opponent'}
           </div>
@@ -55,7 +61,7 @@ export default function BotArea({ state, isThinking, playerName = 'Hoffman', hid
           scoreColor={scoreColor}
           total={total}
           target={target}
-          isBust={isBust}
+          isBust={visibleIsBust}
           stood={stood}
           suit={suit}
         />

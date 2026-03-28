@@ -5,17 +5,20 @@ import RoleSelect from './components/GameTable/RoleSelect.jsx';
 import LobbyScreen from './components/GameTable/LobbyScreen.jsx';
 import WaitingRoom from './components/GameTable/WaitingRoom.jsx';
 import AssistantMode from './components/GameTable/AssistantMode.jsx';
+import GameHistoryScreen from './components/GameTable/GameHistoryScreen.jsx';
 import { usePeerContext } from './contexts/PeerContext.jsx';
+import { useGameHistory } from './hooks/useGameHistory.js';
 
 // Read Telegram deep-link start_param at boot time (static — won't change during session)
 // e.g. opened via t.me/BOT?startapp=WOLF-42
 const TG_START_PARAM = window.Telegram?.WebApp?.initDataUnsafe?.start_param ?? null;
 
 export default function App() {
-  // screen: 'menu' | 'roleselect' | 'lobby' | 'waiting' | 'game' | 'assistant'
+  // screen: 'menu' | 'roleselect' | 'lobby' | 'waiting' | 'game' | 'assistant' | 'history'
   // mode: 'ai' | 'hotseat' | 'online' | 'llm' (game screen modes)
   // If launched via deep-link invite, go straight to lobby with the room code
   const [screen, setScreen] = useState(TG_START_PARAM ? 'lobby' : 'menu');
+  const { history, recordGame, clearHistory } = useGameHistory();
   const [gameConfig, setGameConfig] = useState({ mode: 'ai', playerRole: 'clancy' });
 
   // P2P online config passed through lobby → waiting → game
@@ -29,6 +32,10 @@ export default function App() {
 
   // ── Menu ──────────────────────────────────────────────────────────────────
   const handleMenuStart = ({ mode }) => {
+    if (mode === 'history') {
+      setScreen('history');
+      return;
+    }
     if (mode === 'ai') {
       setGameConfig({ mode: 'ai', playerRole: 'clancy' });
       setScreen('game');
@@ -52,14 +59,19 @@ export default function App() {
 
   // ── Online: host established a connection ─────────────────────────────────
   // LobbyScreen calls this when a guest peer connects (host's onOpen fires)
-  const handleHostReady = useCallback(({ code, seed, isHost }) => {
-    setOnlineState({ isHost: true, code, seed, opponentConnected: true });
+  const handleHostReady = useCallback(({ code, seed, isHost, myName, opponentName }) => {
+    setOnlineState(prev => ({
+      ...( prev || {}),
+      isHost: true, code, seed, opponentConnected: true,
+      myName: myName || prev?.myName,
+      opponentName: opponentName || prev?.opponentName,
+    }));
     setScreen('waiting');
   }, []);
 
   // ── Online: guest connected to host ──────────────────────────────────────
-  const handleJoinReady = useCallback(({ code, seed, isHost, hostPeerId }) => {
-    setOnlineState({ isHost: false, code, seed, opponentConnected: true, hostPeerId });
+  const handleJoinReady = useCallback(({ code, seed, isHost, hostPeerId, myName, opponentName }) => {
+    setOnlineState({ isHost: false, code, seed, opponentConnected: true, hostPeerId, myName, opponentName });
     setScreen('waiting');
   }, []);
 
@@ -221,10 +233,20 @@ export default function App() {
           seed={gameConfig.seed}
           slowBot={gameConfig.slowBot ?? false}
           onReturnToMenu={handleReturnToMenu}
+          myName={onlineState?.myName}
+          opponentName={onlineState?.opponentName}
+          onRecordGame={recordGame}
         />
       )}
       {screen === 'assistant' && (
         <AssistantMode onBack={handleBackToMenu} />
+      )}
+      {screen === 'history' && (
+        <GameHistoryScreen
+          history={history}
+          onBack={handleBackToMenu}
+          onClearHistory={clearHistory}
+        />
       )}
     </div>
   );

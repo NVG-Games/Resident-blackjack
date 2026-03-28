@@ -7,7 +7,10 @@ import { ROUND_STATE } from '../../engine/gameState.js';
 export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceCanPlay = false }) {
   const containerRef = useRef(null);
   const [open, setOpen] = useState(false);
-  const canPlay = forceCanPlay || (!disabled && roundState === ROUND_STATE.PLAYER_TURN);
+  // Trumps can be played anytime it's your turn (PLAYER_TURN), including after standing.
+  // disabled flag controls per-player blocking (opponent's turn, hotseat not confirmed, etc.)
+  const isYourTurn = roundState === ROUND_STATE.PLAYER_TURN;
+  const canPlay = forceCanPlay || (!disabled && isYourTurn);
 
   useEffect(() => {
     if (containerRef.current) {
@@ -76,6 +79,7 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
             display: 'flex',
             alignItems: 'flex-end',
             justifyContent: 'center',
+            touchAction: 'none',
           }}
         >
           <div
@@ -88,6 +92,7 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
               borderRadius: '16px 16px 0 0',
               padding: '20px 20px calc(20px + env(safe-area-inset-bottom))',
               boxShadow: '0 -8px 40px rgba(0,0,0,0.9)',
+              touchAction: 'pan-y',
             }}
           >
             {/* Header */}
@@ -106,7 +111,7 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
             </div>
 
             {/* Cards grid */}
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div data-scroll style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', overflowY: 'auto', maxHeight: 'calc(60vh - 80px)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
               {trumps.map((trump) => (
                 <TrumpCard
                   key={trump.id}
@@ -121,7 +126,7 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
 
             {!canPlay && (
               <p style={{ fontFamily: 'Cinzel, serif', fontSize: 14, color: '#5a5040', textAlign: 'center', marginTop: 16, fontStyle: 'italic' }}>
-                Not your turn
+                {isYourTurn ? 'Waiting for confirmation…' : 'Not your turn'}
               </p>
             )}
           </div>

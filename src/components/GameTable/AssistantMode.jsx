@@ -116,7 +116,7 @@ export default function AssistantMode({ onBack }) {
   const draws = history.filter(r => r.winner === 'draw').length;
 
   return (
-    <div style={{ minHeight: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', display: 'flex', flexDirection: 'column', background: '#080604', fontFamily: 'Cinzel, serif', color: '#e8d5b0' }}>
+    <div data-scroll style={{ minHeight: '100dvh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', display: 'flex', flexDirection: 'column', background: '#080604', fontFamily: 'Cinzel, serif', color: '#e8d5b0' }}>
 
       {/* ── TOP BAR ── */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: 'max(8px, env(safe-area-inset-top)) 20px 8px', borderBottom: '1px solid rgba(255,209,82,0.15)', background: 'rgba(0,0,0,0.6)' }}>
@@ -166,7 +166,7 @@ export default function AssistantMode({ onBack }) {
       </div>
 
       {/* ── TWO COLUMNS ── */}
-      <div style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'auto' }}>
+      <div data-scroll style={{ flex: 1, display: 'grid', gridTemplateColumns: '1fr 1fr', overflow: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
         <PlayerPanel
           name="Clancy" nameColor="#ffd152"
           cards={clancyCards} total={clancyTotal} target={target}
@@ -418,7 +418,7 @@ function HealthStepper({ health, onChange }) {
 function TrumpPickerModal({ onSelect, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.9)' }} onClick={onClose}>
-      <div style={{ width: '100%', maxWidth: 520, borderRadius: '12px 12px 0 0', padding: '20px 20px 32px', maxHeight: '80vh', overflowY: 'auto', background: '#0e0c09', border: '1px solid rgba(255,209,82,0.15)' }}
+      <div data-scroll style={{ width: '100%', maxWidth: 520, borderRadius: '12px 12px 0 0', padding: '20px 20px 32px', maxHeight: '80vh', overflowY: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', background: '#0e0c09', border: '1px solid rgba(255,209,82,0.15)' }}
         onClick={e => e.stopPropagation()}>
         <div style={{ fontFamily: 'Cinzel, serif', fontSize: 20, textAlign: 'center', color: '#e8d5b0', letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>Add Trump</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>

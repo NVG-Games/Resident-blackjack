@@ -13,10 +13,12 @@ import TrumpHand from '../TrumpCard/TrumpHand.jsx';
 import BetPanel from '../BetPanel/BetPanel.jsx';
 import TableTrumps from '../BetPanel/TableTrumps.jsx';
 import PhaseOverlay from '../PhaseOverlay/PhaseOverlay.jsx';
-import GameLog from '../GameLog/GameLog.jsx';
+import { GameLogSidebar, GameLogModal } from '../GameLog/GameLog.jsx';
 import ActionButtons from './ActionButtons.jsx';
 import RoundResult from './RoundResult.jsx';
 import HandoffScreen from './HandoffScreen.jsx';
+import TrumpPlayedBanner from './TrumpPlayedBanner.jsx';
+import { useEmojiReaction, EmojiPicker, FloatingEmoji } from './EmojiReaction.jsx';
 
 const BOT_THINK_DELAY_MS = 800;
 const BOT_FAST_DELAY_MS = 350;
@@ -28,7 +30,7 @@ const wait = (ms) => new Promise((res) => setTimeout(res, ms));
 //             'hoffman' = you are Hoffman (bot slot), Clancy is opponent
 // In hot-seat/online both are human — role only changes labels.
 // seed: optional number for P2P online mode to synchronise deck shuffle.
-export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: seedProp, slowBot = false, onReturnToMenu }) {
+export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: seedProp, slowBot = false, onReturnToMenu, myName, opponentName, onRecordGame }) {
   const isHotSeat = mode === 'hotseat';
   const isOnline = mode === 'online';
   const isLlm = mode === 'llm';
@@ -36,9 +38,9 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const isHost = isOnline && playerRole === 'clancy';
 
   // playerRole affects name labels. Engine is unchanged: "player" = top of reducer, "bot" = bottom.
-  // If you picked Hoffman: the "player" slot is labelled Hoffman, "bot" slot is labelled Clancy.
-  const player1Name = playerRole === 'clancy' ? 'Player 1' : 'Player 2';
-  const player2Name = playerRole === 'clancy' ? 'Player 2' : 'Player 1';
+  // In online mode use real names if provided; fallback to Player 1/2.
+  const player1Name = (isOnline && myName) ? myName : (playerRole === 'clancy' ? 'Player 1' : 'Player 2');
+  const player2Name = (isOnline && opponentName) ? opponentName : (playerRole === 'clancy' ? 'Player 2' : 'Player 1');
 
   const [state, dispatch] = useReducer(gameReducer, null, () => ({
     ...createInitialState(),
@@ -63,6 +65,11 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       if (action.type === 'HOST_TIMEOUT') {
         // Host abandoned the round — guest returns to menu
         onReturnToMenu?.();
+        return;
+      }
+      if (action.type === 'SHOW_FINAL_OVERLAY') {
+        // Host revealed the final overlay — guest should do the same
+        setFinalRoundSeen(true);
         return;
       }
       dispatch(action);
@@ -101,6 +108,17 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   // Exit to menu confirmation
   const [showExitConfirm, setShowExitConfirm] = useState(false);
+
+  // Game log modal (mobile)
+  const [showLogModal, setShowLogModal] = useState(false);
+
+  // Emoji reactions
+  const { myEmoji, oppEmoji, pickerOpen, sendEmoji, togglePicker, closePicker } = useEmojiReaction({
+    isOnline,
+    peerSend,
+    onData,
+    isHost,
+  });
 
 
   const shakeTable = useCallback(() => {
@@ -153,6 +171,36 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   useEffect(() => {
     if (state.roundResult?.winner === 'bot') shakeTable();
   }, [state.roundResult, shakeTable]);
+
+  // Record completed game to history
+  const gameRecordedRef = useRef(false);
+  useEffect(() => { if (!state.gameOver) gameRecordedRef.current = false; }, [state.gameOver]);
+  useEffect(() => {
+    if (!state.gameOver || gameRecordedRef.current) return;
+    gameRecordedRef.current = true;
+    if (!onRecordGame) return;
+    const isGuestOnline = isOnline && !isHost;
+    const myHP = isGuestOnline ? state.botHealth : state.playerHealth;
+    const oppHP = isGuestOnline ? state.playerHealth : state.botHealth;
+    let outcome = 'draw';
+    if (myHP > 0 && oppHP <= 0) outcome = 'win';
+    else if (oppHP > 0 && myHP <= 0) outcome = 'loss';
+    else if (myHP > oppHP) outcome = 'win';
+    else if (oppHP > myHP) outcome = 'loss';
+    onRecordGame({
+      mode,
+      myName: myName || player1Name,
+      opponentName: opponentName || player2Name,
+      outcome,
+      myFinalHP: myHP,
+      opponentFinalHP: oppHP,
+      totalRounds: state.roundNumber ?? state.round,
+      finalPhase: state.phase,
+    });
+  // Only re-run when gameOver toggles. Other deps (onRecordGame, myName, etc.) are
+  // stable across a game session; gameRecordedRef prevents any double-recording.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.gameOver]);
 
   // Hot-seat: reset confirmation on every turn change → triggers handoff screen.
   // Exception: when round just started (PLAYER_TURN after DEALING), P1 already has the device,
@@ -336,6 +384,13 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } });
   }, [guardedDispatch]);
 
+  const { roundState, overlay, roundResult, gameOver } = state;
+  // Show RoundResult for the final round too — don't skip it when gameOver
+  const [finalRoundSeen, setFinalRoundSeen] = useState(false);
+  // Reset when a new game starts (roundNumber resets to 0 via START_GAME)
+  useEffect(() => { if (!gameOver) setFinalRoundSeen(false); }, [gameOver]);
+  const showRoundResult = roundState === ROUND_STATE.ROUND_OVER && !overlay && (!gameOver || !finalRoundSeen);
+
   const handleDismissOverlay = useCallback(() => {
     if (state.gameOver) {
       if (isOnline) syncedDispatch({ type: ACTIONS.START_GAME });
@@ -347,26 +402,44 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   }, [state.gameOver, isOnline, syncedDispatch]);
 
   const handleNextRound = useCallback(() => {
+    if (gameOver) {
+      // Final round — hide RoundResult and reveal victory/defeat overlay
+      setFinalRoundSeen(true);
+      const overlayAction = { type: ACTIONS.SHOW_GAME_OVER_OVERLAY };
+      if (isOnline) {
+        syncedDispatch(overlayAction);
+        // Signal the guest to also reveal the overlay (legacy support)
+        if (isHost) peerSend({ type: 'SHOW_FINAL_OVERLAY' });
+      } else {
+        dispatch(overlayAction);
+      }
+      return;
+    }
     const a = { type: ACTIONS.NEXT_ROUND };
     if (isOnline) syncedDispatch(a); else dispatch(a);
-  }, [isOnline, syncedDispatch]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameOver, isOnline, isHost, peerSend, syncedDispatch]);
 
-  // Online host timeout: if host doesn't click Next Round in time, return to menu
+  // Online host timeout: if host doesn't click Next Round in time, auto-advance
   const handleHostRoundTimeout = useCallback(() => {
     if (isOnline && isHost) {
+      if (gameOver) {
+        // Final round — reveal overlay for both
+        setFinalRoundSeen(true);
+        syncedDispatch({ type: ACTIONS.SHOW_GAME_OVER_OVERLAY });
+        peerSend({ type: 'SHOW_FINAL_OVERLAY' });
+        return;
+      }
       // Notify guest so they also go to menu
       peerSend({ type: 'HOST_TIMEOUT' });
       onReturnToMenu?.();
     }
-  }, [isOnline, isHost, peerSend, onReturnToMenu]);
+  }, [isOnline, isHost, gameOver, peerSend, onReturnToMenu, syncedDispatch]);
 
   const handleHandoffReady = useCallback((who) => {
     if (isHotSeat) setConfirmedPlayer(who);
     else setHotSeatBotActive(true);
   }, [isHotSeat]);
-
-  const { roundState, overlay, roundResult, gameOver } = state;
-  const showRoundResult = roundState === ROUND_STATE.ROUND_OVER && !overlay && !gameOver;
 
   // Hot-seat pass-and-play:
   // After every roundState change, confirmedPlayer resets to null.
@@ -402,7 +475,15 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   // Trump hand to show: player 1's or player 2's (bot) based on who's acting
   const activeTrumpHand = showBotControls ? state.botTrumpHand : state.playerTrumpHand;
   const activeTrumpHandler = showBotControls ? handleBotPlayTrump : handlePlayTrump;
-  const activeTrumpDisabled = showBotControls ? false : isActionDisabled;
+  // Trumps can be played anytime it's your turn (even after standing) — only block on opponent's turn.
+  // Online guest plays from the "bot" slot, so their turn is isBotTurn (not hotSeatBotActive, which is
+  // a hot-seat-only flag and is always false in online mode).
+  const isTrumpDisabled = isHotSeat
+    ? (!isPlayerTurn && !showBotControls) || (isPlayerTurn && confirmedPlayer !== 'p1') || (showBotControls && confirmedPlayer !== 'p2')
+    : isOnline
+      ? (isHost ? !isPlayerTurn : !isBotTurn)
+      : isThinking || !isPlayerTurn;
+  const activeTrumpDisabled = showBotControls ? false : isTrumpDisabled;
 
   return (
     <div ref={tableRef} className="relative w-full h-full flex flex-col"
@@ -494,8 +575,11 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         </div>
       )}
 
-      {/* Main game layout — single column, fills viewport */}
-      <div className="relative z-20 flex flex-col h-full" style={{ paddingTop: 12 }}>
+      {/* Main game layout — flex row: game column + desktop log sidebar */}
+      <div className="relative z-20 flex h-full" style={{ paddingTop: 12 }}>
+
+        {/* Game column — takes all space on mobile, leaves room for sidebar on desktop */}
+        <div className="flex flex-col flex-1 min-w-0 h-full">
 
         {/* TOP: Bet panel */}
         <section className="flex-none w-full px-3 sm:px-6">
@@ -512,6 +596,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
             hideHoleCard={!isHotSeat}
             flipForGuest={isOnline && !isHost}
             isActivePlayer={isHotSeat && showBotControls}
+            activeEmoji={oppEmoji}
           />
           {isLlm && llmReasoning && !isThinking && (
             <div
@@ -540,6 +625,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           <TableTrumps
             playerTableTrumps={state.playerTableTrumps}
             botTableTrumps={state.botTableTrumps}
+            lastInstantTrump={state.lastInstantTrump}
             isGuestOnline={isOnline && !isHost}
           />
         </section>
@@ -552,6 +638,12 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
             hideCards={isHotSeat && showBotControls && !showRoundResult}
             flipForGuest={isOnline && !isHost}
             isOpponent={isHotSeat && showBotControls}
+            onLogOpen={() => setShowLogModal(true)}
+            activeEmoji={myEmoji}
+            pickerOpen={pickerOpen}
+            onEmojiToggle={togglePicker}
+            onEmojiSelect={sendEmoji}
+            onPickerClose={closePicker}
           />
           <div className="w-full max-w-lg">
             <TrumpHand
@@ -696,6 +788,22 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         />
         </div>
 
+        </div>{/* end game column */}
+
+        {/* Desktop log sidebar — hidden on mobile */}
+        <aside
+          className="hidden md:flex flex-col flex-none"
+          style={{
+            width: 220,
+            borderLeft: '1px solid rgba(255,209,82,0.08)',
+            background: 'rgba(8,6,4,0.6)',
+            height: '100%',
+            overflow: 'hidden',
+          }}
+        >
+          <GameLogSidebar log={state.log} />
+        </aside>
+
       </div>
 
       {/* ROUND RESULT */}
@@ -708,6 +816,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           isOnline={isOnline}
           isHost={isHost}
           onHostTimeout={handleHostRoundTimeout}
+          isFinalRound={gameOver}
         />
       )}
 
@@ -723,6 +832,17 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           onReady={() => handleHandoffReady(activeIsP1 ? 'p1' : 'p2')}
         />
       )}
+
+      {/* Mobile log modal */}
+      {showLogModal && (
+        <GameLogModal log={state.log} onClose={() => setShowLogModal(false)} />
+      )}
+
+      {/* Trump played banner */}
+      <TrumpPlayedBanner
+        lastPlayedTrump={state.lastPlayedTrump}
+        isGuestOnline={isOnline && !isHost}
+      />
 
       {/* Vignette */}
       <div className="absolute inset-0 pointer-events-none z-5"
