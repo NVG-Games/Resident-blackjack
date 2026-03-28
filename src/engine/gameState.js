@@ -15,6 +15,7 @@ export const ACTIONS = {
   NEXT_ROUND: 'NEXT_ROUND',
   NEXT_PHASE: 'NEXT_PHASE',
   DISMISS_OVERLAY: 'DISMISS_OVERLAY',
+  SHOW_GAME_OVER_OVERLAY: 'SHOW_GAME_OVER_OVERLAY',
   ADD_LOG: 'ADD_LOG',
 };
 
@@ -57,6 +58,8 @@ export function createInitialState() {
     playerTrumpsUsedTotal: 0,
     botKilledPlayerTrumpsTotal: 0,
     gameOver: false,
+    lastInstantTrump: null,  // { trump, owner: 'player'|'bot' } — shown briefly after instant trump use
+    lastPlayedTrump: null,   // { trump, owner: 'player'|'bot' } — any trump played, for banner display
   };
 }
 
@@ -139,6 +142,8 @@ export function gameReducer(state, action) {
         roundNumber: state.roundNumber + 1,
         trumpsUsedThisTurn: 0,
         botTrumpsUsedThisTurn: 0,
+        lastInstantTrump: null,
+        lastPlayedTrump: null,
       };
     }
 
@@ -156,7 +161,6 @@ export function gameReducer(state, action) {
       const { card, remaining } = drawCard(state.deck);
       const newHand = [...state.playerHand, card];
       const total = getHandTotal(newHand);
-      const target = getEffectiveTarget([...state.playerTableTrumps, ...state.botTableTrumps]);
       const log = [...state.log, { msg: `You draw ${card.value}. Total: ${total}.`, time: Date.now() }];
 
       return {
@@ -180,6 +184,8 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.PLAYER_USE_TRUMP: {
+      // Only allow trump use during PLAYER_TURN. After PLAYER_STAND the round state
+      // transitions to BOT_TURN, so this guard effectively blocks post-stand trump use.
       if (state.roundState !== ROUND_STATE.PLAYER_TURN) return state;
       const { trump } = action;
 
@@ -194,12 +200,18 @@ export function gameReducer(state, action) {
       const result = applyTrump(trump, state, 'player');
 
       const newUsedCount = state.trumpsUsedThisTurn + 1;
+      const isInstant = !PERMANENT_TRUMPS.has(trump.type);
       let newState = {
         ...state,
         ...result,
         trumpsUsedThisTurn: newUsedCount,
         playerTrumpsUsedTotal: state.playerTrumpsUsedTotal + 1,
-        roundState: ROUND_STATE.BOT_TURN,
+        // Trump use does NOT pass the turn — player keeps acting (mirrors bot trump behaviour)
+        roundState: state.roundState,
+        playerBet: state.playerBet + (result.playerBetDelta ?? 0),
+        botBet: state.botBet + (result.botBetDelta ?? 0),
+        lastInstantTrump: isInstant ? { trump, owner: 'player' } : state.lastInstantTrump,
+        lastPlayedTrump: { trump, owner: 'player' },
       };
 
       // Mind Shift removal check
@@ -250,10 +262,8 @@ export function gameReducer(state, action) {
         const { card, remaining } = drawCard(state.deck);
         const newHand = [...state.botHand, card];
         const total = getHandTotal(newHand);
-        const target = getEffectiveTarget([...state.playerTableTrumps, ...state.botTableTrumps]);
         const log = [...state.log, { msg: `Hoffman draws. His total approaches...`, time: Date.now() }];
 
-        // No auto-stand on bust — bot (human in hot-seat) must press STAND themselves.
         // Only reset playerStood if player hasn't stood yet (hot-seat: P2 hit means P1 decides again).
         // When player already stood (AI mode), keep playerStood=true so auto-resolve can fire.
         return {
@@ -269,11 +279,17 @@ export function gameReducer(state, action) {
       if (botAction === 'trump' && trump) {
         const result = applyTrump(trump, state, 'bot');
         const newBotUsed = state.botTrumpsUsedThisTurn + 1;
+        const isInstant = !PERMANENT_TRUMPS.has(trump.type);
         return {
           ...state,
           ...result,
           botTrumpsUsedThisTurn: newBotUsed,
-          roundState: nextTurn, // stay in BOT_TURN if player already stood
+          // Trump use does NOT pass the turn — bot keeps acting
+          roundState: state.roundState,
+          playerBet: state.playerBet + (result.playerBetDelta ?? 0),
+          botBet: state.botBet + (result.botBetDelta ?? 0),
+          lastInstantTrump: isInstant ? { trump, owner: 'bot' } : state.lastInstantTrump,
+          lastPlayedTrump: { trump, owner: 'bot' },
         };
       }
 
@@ -356,16 +372,12 @@ export function gameReducer(state, action) {
         roundResult: { winner: roundWinner, playerTotal, botTotal, target, effectivePlayerBet, effectiveBotBet },
         gameOver,
         winner: gameWinner,
+        lastInstantTrump: null,
+        lastPlayedTrump: null,
         log: [...mindShiftedState.log, { msg: resultMsg, time: Date.now() }],
-        overlay: gameOver
-          ? {
-            type: gameWinner === 'player' ? 'victory' : 'defeat',
-            message: gameWinner === 'player' ? 'YOU SURVIVE' : 'YOU FALL',
-            subMessage: gameWinner === 'player'
-              ? 'Hoffman\'s saw blade stops. Lucas sneers. The game is over.'
-              : 'The saw inches forward. Darkness takes you.',
-          }
-          : null,
+        // No overlay here — GameTable shows RoundResult first ("See Final Result →"),
+        // then reveals victory/defeat overlay via finalRoundSeen / SHOW_FINAL_OVERLAY.
+        overlay: null,
       };
     }
 
@@ -431,6 +443,20 @@ export function gameReducer(state, action) {
         return { ...state, overlay: null, roundState: ROUND_STATE.DEALING, roundNumber: state.roundNumber - 1 };
       }
       return { ...state, overlay: null };
+    }
+
+    case ACTIONS.SHOW_GAME_OVER_OVERLAY: {
+      const w = state.winner;
+      return {
+        ...state,
+        overlay: {
+          type: w === 'player' ? 'victory' : 'defeat',
+          message: w === 'player' ? 'YOU SURVIVE' : 'YOU FALL',
+          subMessage: w === 'player'
+            ? 'Hoffman\'s saw blade stops. Lucas sneers. The game is over.'
+            : 'The saw inches forward. Darkness takes you.',
+        },
+      };
     }
 
     case ACTIONS.TRIGGER_BOT_TURN: {

@@ -1,9 +1,13 @@
+import { useRef } from 'react';
 import { getHandTotal } from '../../engine/deck.js';
 import { getEffectiveTarget } from '../../engine/trumpEngine.js';
 import { ROUND_STATE } from '../../engine/gameState.js';
 import Card from '../Card/Card.jsx';
+import { FloatingEmoji, EmojiPicker } from '../GameTable/EmojiReaction.jsx';
+import PlayerNameLabel from '../GameTable/PlayerNameLabel.jsx';
 
-export default function PlayerArea({ state, playerName = 'Clancy', hideCards = false, flipForGuest = false, isOpponent = false }) {
+export default function PlayerArea({ state, playerName = 'Clancy', hideCards = false, flipForGuest = false, isOpponent = false, onLogOpen, activeEmoji, pickerOpen, onEmojiToggle, onEmojiSelect, onPickerClose }) {
+  const nameButtonRef = useRef(null);
   const { playerHand, botHand, playerTableTrumps, botTableTrumps, playerHealth, botHealth, playerStood, botStood, suit = 'spades' } = state;
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
 
@@ -47,14 +51,71 @@ export default function PlayerArea({ state, playerName = 'Clancy', hideCards = f
       {/* Identity row — below cards */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
         <HealthBar health={health} maxHealth={10} />
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: isOpponent ? '#e8d5b0' : '#ffd152', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-            {playerName}
-          </div>
-          <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#9c8e76', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
-            {isOpponent ? 'Opponent' : 'You'}
-          </div>
+
+        {/* Name block — clickable to open emoji picker */}
+        <div style={{ position: 'relative', textAlign: 'center' }}>
+          {/* Floating emoji above name */}
+          <FloatingEmoji emoji={activeEmoji} onDone={() => {}} />
+
+          {/* Emoji picker grid */}
+          {pickerOpen && onEmojiSelect && (
+            <>
+              {/* Click-away backdrop */}
+              <div
+                onClick={onPickerClose}
+                style={{ position: 'fixed', inset: 0, zIndex: 299 }}
+              />
+              <EmojiPicker onSelect={onEmojiSelect} anchorRef={nameButtonRef} />
+            </>
+          )}
+
+          <button
+            ref={nameButtonRef}
+            onClick={onEmojiToggle}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: onEmojiToggle ? 'pointer' : 'default',
+              padding: 0,
+              textAlign: 'center',
+              maxWidth: 120,
+            }}
+          >
+            <PlayerNameLabel
+              name={playerName}
+              maxChars={12}
+              style={{ fontFamily: 'Cinzel, serif', fontWeight: 700, fontSize: 20, color: isOpponent ? '#e8d5b0' : '#ffd152', letterSpacing: '0.08em', textTransform: 'uppercase' }}
+            />
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#9c8e76', letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1 }}>
+              {isOpponent ? 'Opponent' : 'You'}
+            </div>
+          </button>
         </div>
+
+        {/* Log button — mobile only (hidden on md+) */}
+        {onLogOpen && (
+          <button
+            onClick={onLogOpen}
+            className="md:hidden"
+            style={{
+              background: 'rgba(255,209,82,0.07)',
+              border: '1px solid rgba(255,209,82,0.18)',
+              borderRadius: 6,
+              padding: '6px 10px',
+              cursor: 'pointer',
+              fontFamily: 'Cinzel, serif',
+              fontSize: 16,
+              color: '#7a6a50',
+              lineHeight: 1,
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#ffd152'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#7a6a50'; e.currentTarget.style.borderColor = 'rgba(255,209,82,0.18)'; }}
+            title="Game log"
+          >
+            📜
+          </button>
+        )}
       </div>
     </div>
   );

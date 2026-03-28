@@ -198,13 +198,23 @@ export default function MainMenu({ onStart }) {
 
           {import.meta.env.VITE_MCP_URL && <button
             className={btnBase}
-            style={{ ...btnStyle, fontSize: 16, padding: '11px 24px', letterSpacing: '0.02em', width: '100%', opacity: 0.7 }}
+            style={{ ...btnStyle, fontSize: 16, padding: '11px 24px', letterSpacing: '0.02em', width: '100%', opacity: 0.7, marginBottom: 6 }}
             onMouseEnter={hoverIn}
             onMouseLeave={hoverOut}
             onClick={() => onStart({ mode: 'llm' })}
           >
             ✦ Play vs Claude AI
           </button>}
+
+          <button
+            className={btnBase}
+            style={{ ...btnStyle, fontSize: 16, padding: '11px 24px', letterSpacing: '0.02em', width: '100%', opacity: 0.55 }}
+            onMouseEnter={hoverIn}
+            onMouseLeave={hoverOut}
+            onClick={() => onStart({ mode: 'history' })}
+          >
+            ◈ Game History
+          </button>
         </div>
 
       </div>

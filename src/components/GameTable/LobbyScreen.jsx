@@ -3,7 +3,9 @@ import { gsap } from 'gsap';
 import { useLobby, generateRoomCode } from '../../hooks/useLobby.js';
 import { usePeerContext } from '../../contexts/PeerContext.jsx';
 import { useTelegram } from '../../hooks/useTelegram.js';
+import { usePlayerName } from '../../hooks/usePlayerName.js';
 import { generateSeed } from '../../engine/deck.js';
+import NamePrompt from './NamePrompt.jsx';
 
 const panelStyle = {
   background: 'linear-gradient(160deg, #141008 0%, #0e0b06 60%, #080604 100%)',
@@ -27,6 +29,8 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
   const { rooms, displayRooms, loading, error, announce, remove, refresh } = useLobby();
   const { peerId, peerStatus, connStatus, initPeer, connectToPeer, send, onData, onOpen } = usePeerContext();
   const { tgUser, isTelegram } = useTelegram();
+  const { name: myName, needsPrompt, saveName } = usePlayerName();
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
 
   const [isHosting, setIsHosting] = useState(false);
   const [hostCode, setHostCode] = useState(null);
@@ -57,24 +61,42 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
   // Host: when a guest opens the connection, send GAME_INFO and move to waiting room
   useEffect(() => {
     if (!isHosting) return;
-    const unsub = onOpen(() => {
-      // Send game info to guest so they know the room code and seed
-      send({ type: 'GAME_INFO', code: hostCode, seed: hostSeed });
-      remove(hostCode); // clean up lobby — game is starting
-      onHostReady({ code: hostCode, seed: hostSeed, isHost: true });
-    });
-    return unsub;
-  }, [isHosting, hostCode, hostSeed, onOpen, onHostReady, send]);
+    let nameTimeoutId = null;
 
-  // Guest: receive GAME_INFO from host → move to waiting room
+    // Listen for guest's name reply
+    const unsubData = onData((data) => {
+      if (data?.type === 'GUEST_NAME') {
+        clearTimeout(nameTimeoutId);
+        // Update onlineState with opponent name via callback
+        onHostReady({ code: hostCode, seed: hostSeed, isHost: true, myName: myName || 'Player', opponentName: data.name || 'Player' });
+      }
+    });
+
+    const unsub = onOpen(() => {
+      // Send game info to guest so they know the room code, seed, and host name
+      send({ type: 'GAME_INFO', code: hostCode, seed: hostSeed, hostName: myName || 'Player' });
+      remove(hostCode); // clean up lobby — game is starting
+
+      // Fallback: if guest never sends GUEST_NAME (old client / network drop), proceed after 3s
+      nameTimeoutId = setTimeout(() => {
+        onHostReady({ code: hostCode, seed: hostSeed, isHost: true, myName: myName || 'Player', opponentName: 'Player' });
+      }, 3000);
+    });
+    return () => { unsub(); unsubData(); clearTimeout(nameTimeoutId); };
+  }, [isHosting, hostCode, hostSeed, onOpen, onHostReady, onData, send, myName]);
+
+  // Guest: receive GAME_INFO from host → reply with guest name → move to waiting room
   useEffect(() => {
     const unsub = onData((data) => {
       if (data?.type === 'GAME_INFO') {
-        onJoinReady({ code: data.code, seed: data.seed, isHost: false });
+        const guestName = myName || 'Player';
+        // Reply so host knows guest's name
+        send({ type: 'GUEST_NAME', name: guestName });
+        onJoinReady({ code: data.code, seed: data.seed, isHost: false, myName: guestName, opponentName: data.hostName || 'Player' });
       }
     });
     return unsub;
-  }, [onData, onJoinReady]);
+  }, [onData, onJoinReady, myName, send]);
 
   // Announce to lobby when peerId is available after hosting
   useEffect(() => {
@@ -92,6 +114,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
   }, [isHosting, peerId, hostCode, announce, tgUser]);
 
   const handleHostGame = () => {
+    if (needsPrompt) { setShowNamePrompt(true); return; }
     const code = generateRoomCode();
     const seed = generateSeed();
     setHostCode(code);
@@ -100,7 +123,27 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
     initPeer();
   };
 
+  const pendingActionRef = useRef(null);
+
+  const handleNameSave = (name) => {
+    saveName(name);
+    setShowNamePrompt(false);
+    const action = pendingActionRef.current;
+    pendingActionRef.current = null;
+    // Re-trigger the action that was pending
+    if (action === 'fastplay') {
+      setTimeout(() => handleFastPlay(), 0);
+    } else {
+      setTimeout(() => handleHostGame(), 0);
+    }
+  };
+
   const handleFastPlay = () => {
+    if (needsPrompt) {
+      pendingActionRef.current = 'fastplay';
+      setShowNamePrompt(true);
+      return;
+    }
     if (rooms.length > 0) {
       handleJoinRoom(rooms[0]);
     } else {
@@ -160,6 +203,8 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
     : null;
 
   return (
+    <>
+    {showNamePrompt && <NamePrompt onSave={handleNameSave} />}
     <div
       ref={containerRef}
       style={{
@@ -169,6 +214,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
         background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
         overflowY: 'auto',
         WebkitOverflowScrolling: 'touch',
+        touchAction: 'pan-y',
       }}
     >
       {/* Desktop: two-column layout wrapper */}
@@ -339,6 +385,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
         <div style={{ height: 24 }} />
       </div>
     </div>
+    </>
   );
 }
 
