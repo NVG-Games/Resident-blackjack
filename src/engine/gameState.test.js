@@ -87,16 +87,15 @@ describe('PLAYER_HIT', () => {
     expect(next.roundState).toBe(ROUND_STATE.BOT_TURN);
   });
 
-  it('auto-stands and moves to BOT_TURN when total reaches target', () => {
-    // playerHand = [4, 6] total=10; next card = 3 → total=13; still below 21
-    // Set hand so next card busts (≥21)
+  it('draws the card even when busting — player keeps control to play trumps', () => {
     const state = inRoundState({
       playerHand: [{ value: 4, id: 'c4' }, { value: 10, id: 'c10' }],
       deck: [{ value: 11, id: 'c11' }],
     });
-    // total = 14 + 11 = 25 → >= target(21) → auto-stand
+    // total = 25 → bust, but no auto-stand — player may still use trumps to change target
     const next = gameReducer(state, { type: ACTIONS.PLAYER_HIT });
-    expect(next.playerStood).toBe(true);
+    expect(next.playerStood).toBe(false);
+    expect(next.playerHand).toHaveLength(3);
     expect(next.roundState).toBe(ROUND_STATE.BOT_TURN);
   });
 
@@ -153,15 +152,16 @@ describe('BOT_ACTION hit', () => {
     expect(next.roundState).toBe(ROUND_STATE.PLAYER_TURN);
   });
 
-  it('auto-stands bot when total reaches target', () => {
+  it('draws the card even when busting — no auto-stand', () => {
     const state = inRoundState({
       roundState: ROUND_STATE.BOT_TURN,
       botHand: [{ value: 1, id: 'c1' }, { value: 15, id: 'c15' }],
       deck: [{ value: 11, id: 'c11' }],
     });
-    // total = 16 + 11 = 27 >= 21 → botStood = true
+    // total = 27 → bust, but no auto-stand
     const next = gameReducer(state, { type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } });
-    expect(next.botStood).toBe(true);
+    expect(next.botStood).toBe(false);
+    expect(next.botHand).toHaveLength(3);
   });
 
   it('bot blocked by Dead Silence stands instead of drawing', () => {
@@ -234,7 +234,12 @@ describe('RESOLVE_ROUND', () => {
     const next = gameReducer(state, { type: ACTIONS.RESOLVE_ROUND });
     expect(next.gameOver).toBe(true);
     expect(next.winner).toBe('bot');
-    expect(next.overlay).not.toBeNull();
+    // overlay is shown via SHOW_GAME_OVER_OVERLAY dispatched by UI after RoundResult
+    expect(next.overlay).toBeNull();
+    // verify SHOW_GAME_OVER_OVERLAY sets correct overlay
+    const withOverlay = gameReducer(next, { type: ACTIONS.SHOW_GAME_OVER_OVERLAY });
+    expect(withOverlay.overlay).not.toBeNull();
+    expect(withOverlay.overlay.type).toBe('defeat');
   });
 
   it('Escape trump grants auto-win', () => {
@@ -307,11 +312,11 @@ describe('DISMISS_OVERLAY', () => {
 // ─── PLAYER_USE_TRUMP ─────────────────────────────────────────────────────────
 
 describe('PLAYER_USE_TRUMP', () => {
-  it('applies trump effect and moves to BOT_TURN', () => {
+  it('applies trump effect and keeps PLAYER_TURN (does not pass turn)', () => {
     const shield = makeTrump(TRUMP_TYPES.SHIELD, 'player');
     const state = inRoundState({ playerTrumpHand: [shield] });
     const next = gameReducer(state, { type: ACTIONS.PLAYER_USE_TRUMP, trump: shield });
-    expect(next.roundState).toBe(ROUND_STATE.BOT_TURN);
+    expect(next.roundState).toBe(ROUND_STATE.PLAYER_TURN);
     expect(next.playerTableTrumps.some(t => t.type === TRUMP_TYPES.SHIELD)).toBe(true);
   });
 
