@@ -18,10 +18,14 @@ import ActionButtons from './ActionButtons.jsx';
 import RoundResult from './RoundResult.jsx';
 import HandoffScreen from './HandoffScreen.jsx';
 import TrumpPlayedBanner from './TrumpPlayedBanner.jsx';
+import TrumpWarningToast from './TrumpWarningToast.jsx';
+import GameOverScreen from './GameOverScreen.jsx';
 import { useEmojiReaction, EmojiPicker, FloatingEmoji } from './EmojiReaction.jsx';
 
-const BOT_THINK_DELAY_MS = 800;
-const BOT_FAST_DELAY_MS = 350;
+const BOT_THINK_DELAY_MS = 1200;
+const BOT_FAST_DELAY_MS = 700;
+// Extra pause after the bot plays a trump so the player can read the banner
+const BOT_POST_TRUMP_DELAY_MS = 1800;
 const BOT_SLOW_MIN_MS = 2000;
 const BOT_SLOW_RANGE_MS = 5000;
 const wait = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -266,9 +270,10 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         if (decision.reasoning) setLlmReasoning(decision.reasoning);
         dispatch({ type: ACTIONS.BOT_ACTION, payload: decision });
       } else {
+        const justPlayedTrump = state.botTrumpsUsedThisTurn > 0;
         const delay = slowBot
           ? BOT_SLOW_MIN_MS + Math.random() * BOT_SLOW_RANGE_MS
-          : BOT_FAST_DELAY_MS + Math.random() * BOT_THINK_DELAY_MS;
+          : (justPlayedTrump ? BOT_POST_TRUMP_DELAY_MS : BOT_FAST_DELAY_MS) + Math.random() * BOT_THINK_DELAY_MS;
         await wait(delay);
         if (cancelled) return;
         setIsThinking(false);
@@ -820,9 +825,18 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         />
       )}
 
-      {/* PHASE / VICTORY / DEFEAT OVERLAY */}
-      {overlay && (
+      {/* PHASE OVERLAY (phase transitions, oblivion) */}
+      {overlay && overlay.type !== 'victory' && overlay.type !== 'defeat' && (
         <PhaseOverlay overlay={overlay} onDismiss={handleDismissOverlay} />
+      )}
+
+      {/* GAME OVER SCREEN (victory / defeat with full round summary) */}
+      {overlay && (overlay.type === 'victory' || overlay.type === 'defeat') && (
+        <GameOverScreen
+          overlay={overlay}
+          onDismiss={handleDismissOverlay}
+          isGuestOnline={isOnline && !isHost}
+        />
       )}
 
       {/* HOT-SEAT: handoff screen */}
@@ -843,6 +857,9 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         lastPlayedTrump={state.lastPlayedTrump}
         isGuestOnline={isOnline && !isHost}
       />
+
+      {/* Warning toast when a trump card effect partially failed (e.g. specific card not in deck) */}
+      <TrumpWarningToast warning={state.trumpWarning} />
 
       {/* Vignette */}
       <div className="absolute inset-0 pointer-events-none z-5"

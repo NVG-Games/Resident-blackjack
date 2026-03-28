@@ -23,6 +23,9 @@ function LogEntry({ entry, isLatest }) {
       lineHeight: 1.55,
       borderLeft: isLatest ? '2px solid rgba(255,209,82,0.6)' : '2px solid rgba(255,255,255,0.06)',
       color: isLatest ? '#e8d5b0' : '#5a5040',
+      overflowWrap: 'break-word',
+      wordBreak: 'break-word',
+      minWidth: 0,
     }}>
       {entry.msg}
     </div>
@@ -58,6 +61,7 @@ export function GameLogSidebar({ log }) {
       </div>
       <div data-scroll style={{
         flex: 1,
+        minWidth: 0,
         overflowY: 'auto',
         padding: '6px 4px',
         display: 'flex',
