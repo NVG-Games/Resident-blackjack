@@ -507,6 +507,18 @@ export function gameReducer(state, action) {
       };
     }
 
+    case '__STATE_SYNC__': {
+      // Authoritative state patch from host — only apply if local state diverged.
+      // Prevents guest from getting stuck in BOT_TURN when host has already moved on.
+      const { roundState, playerStood, botStood } = action.payload;
+      if (
+        state.roundState === roundState &&
+        state.playerStood === playerStood &&
+        state.botStood === botStood
+      ) return state;
+      return { ...state, roundState, playerStood, botStood };
+    }
+
     default:
       return state;
   }

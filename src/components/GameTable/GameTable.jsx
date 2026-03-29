@@ -41,10 +41,22 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   // In online mode: host = Clancy (player slot), guest = Hoffman (bot slot).
   const isHost = isOnline && playerRole === 'clancy';
 
-  // playerRole affects name labels. Engine is unchanged: "player" = top of reducer, "bot" = bottom.
-  // In online mode use real names if provided; fallback to Player 1/2.
-  const player1Name = (isOnline && myName) ? myName : (playerRole === 'clancy' ? 'Player 1' : 'Player 2');
-  const player2Name = (isOnline && opponentName) ? opponentName : (playerRole === 'clancy' ? 'Player 2' : 'Player 1');
+  // Engine slots are fixed: "player" slot = host, "bot" slot = guest.
+  // player1Name / player2Name = names injected into reducer actions for the log.
+  //   player1Name → PLAYER_HIT / PLAYER_STAND (engine "player" slot, always the host)
+  //   player2Name → BOT_ACTION              (engine "bot"    slot, always the guest)
+  const player1Name = isOnline
+    ? (isHost ? (myName || 'Player') : (opponentName || 'Player'))
+    : (playerRole === 'clancy' ? 'Player 1' : 'Player 2');
+  const player2Name = isOnline
+    ? (isHost ? (opponentName || 'Player') : (myName || 'Player'))
+    : (playerRole === 'clancy' ? 'Player 2' : 'Player 1');
+
+  // UI display names — what's shown in PlayerArea (bottom = you) and BotArea (top = opponent).
+  // flipForGuest flips the board visually, so PlayerArea shows the guest's own cards.
+  // We keep the name labels consistent with what the current viewer sees.
+  const myDisplayName = isOnline ? (myName || 'Player') : player1Name;
+  const opponentDisplayName = isOnline ? (opponentName || 'Player') : player2Name;
 
   const [state, dispatch] = useReducer(gameReducer, null, () => ({
     ...createInitialState(),
@@ -73,6 +85,12 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       if (action.type === 'SHOW_FINAL_OVERLAY') {
         // Host revealed the final overlay — guest should do the same
         setFinalRoundSeen(true);
+        return;
+      }
+      if (action.type === 'STATE_SYNC') {
+        // Host periodically sends authoritative turn state.
+        // Guest applies it if local state diverged (fixes stuck-turn desync).
+        dispatch({ type: '__STATE_SYNC__', payload: action.payload });
         return;
       }
       dispatch(action);
@@ -439,6 +457,25 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     }
   }, [isOnline, isHost, gameOver, peerSend, syncedDispatch]);
 
+  // Host periodically sends authoritative turn state to guest so stuck turns self-heal.
+  // Runs every 3s during an active round (not during ROUND_OVER / RESOLVING / overlays).
+  useEffect(() => {
+    if (!isOnline || !isHost || state.gameOver || state.overlay) return;
+    const activeRound = state.roundState === ROUND_STATE.PLAYER_TURN || state.roundState === ROUND_STATE.BOT_TURN;
+    if (!activeRound) return;
+    const interval = setInterval(() => {
+      peerSend({
+        type: 'STATE_SYNC',
+        payload: {
+          roundState: state.roundState,
+          playerStood: state.playerStood,
+          botStood: state.botStood,
+        },
+      });
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [isOnline, isHost, state.gameOver, state.overlay, state.roundState, state.playerStood, state.botStood, peerSend]);
+
   const handleHandoffReady = useCallback((who) => {
     if (isHotSeat) setConfirmedPlayer(who);
     else setHotSeatBotActive(true);
@@ -594,7 +631,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           <BotArea
             state={state}
             isThinking={isThinking && !isHotSeat && !isOnline}
-            playerName={(isHotSeat || isOnline) ? player2Name : 'Hoffman'}
+            playerName={isOnline ? opponentDisplayName : (isHotSeat ? player2Name : 'Hoffman')}
             hideCards={isHotSeat && !showBotControls && !showRoundResult}
             hideHoleCard={!isHotSeat}
             flipForGuest={isOnline && !isHost}
@@ -637,7 +674,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         <section className="flex-none flex flex-col items-center px-3 sm:px-6" style={{ paddingTop: 8, gap: 8 }}>
           <PlayerArea
             state={state}
-            playerName={(isHotSeat || isOnline) ? player1Name : 'Clancy'}
+            playerName={isOnline ? myDisplayName : (isHotSeat ? player1Name : 'Clancy')}
             hideCards={isHotSeat && showBotControls && !showRoundResult}
             flipForGuest={isOnline && !isHost}
             isOpponent={isHotSeat && showBotControls}
