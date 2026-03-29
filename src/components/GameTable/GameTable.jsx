@@ -457,22 +457,23 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     }
   }, [isOnline, isHost, gameOver, peerSend, syncedDispatch]);
 
-  // Host periodically sends authoritative turn state to guest so stuck turns self-heal.
-  // Runs every 3s during an active round (not during ROUND_OVER / RESOLVING / overlays).
+  // Host sends authoritative turn state to guest on every state change + every 2s.
+  // This self-heals desync (stuck turns) within 2 seconds maximum.
   useEffect(() => {
     if (!isOnline || !isHost || state.gameOver || state.overlay) return;
     const activeRound = state.roundState === ROUND_STATE.PLAYER_TURN || state.roundState === ROUND_STATE.BOT_TURN;
     if (!activeRound) return;
+    const payload = {
+      roundState: state.roundState,
+      playerStood: state.playerStood,
+      botStood: state.botStood,
+    };
+    // Send immediately on state change
+    peerSend({ type: 'STATE_SYNC', payload });
+    // Then keep sending every 2s in case the first packet was lost
     const interval = setInterval(() => {
-      peerSend({
-        type: 'STATE_SYNC',
-        payload: {
-          roundState: state.roundState,
-          playerStood: state.playerStood,
-          botStood: state.botStood,
-        },
-      });
-    }, 3000);
+      peerSend({ type: 'STATE_SYNC', payload });
+    }, 2000);
     return () => clearInterval(interval);
   }, [isOnline, isHost, state.gameOver, state.overlay, state.roundState, state.playerStood, state.botStood, peerSend]);
 

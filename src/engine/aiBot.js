@@ -158,8 +158,8 @@ export function getBotDecision(state) {
   const bustChance = bustProbability(botTotal, state.deck, target);
   const phase = state.phase;
 
-  // Already stood or at target
-  if (state.botStood) return { type: 'stand' };
+  // Already at target — no need to draw more
+  if (botTotal === target) return { type: 'stand' };
 
   // Return card if busted — use trump first
   if (botTotal > target && state.botTrumpHand.some(t => t.type === TRUMP_TYPES.RETURN)) {

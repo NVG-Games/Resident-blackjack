@@ -54,6 +54,35 @@ src/assets/trumps/   ← 33 PNG trump card images (from RE Fandom Wiki)
 
 ## Critical invariants — never break these
 
+### 🚨 0. STAND = SKIP THIS TURN. HIT RESETS BOTH STOOD FLAGS.
+
+**How the mechanic works:**
+- STAND = pass your turn. The opponent then acts.
+- HIT = take a card, reset BOTH `playerStood` AND `botStood` to `false`. The round continues.
+- Round ends ONLY when both players stand on the SAME exchange (both flags simultaneously `true`).
+
+**REQUIRED — `PLAYER_HIT` and `BOT_ACTION hit` MUST do this:**
+```js
+// CORRECT — inside PLAYER_HIT:
+playerStood: false,
+botStood: false,   // ← reset both on every HIT
+
+// CORRECT — inside BOT_ACTION hit:
+playerStood: false,
+botStood: false,   // ← reset both on every HIT
+```
+
+**FORBIDDEN — these are bugs:**
+```js
+// WRONG — don't touch stood flags in HIT at all (old wrong pattern):
+// (missing playerStood/botStood reset → stand becomes permanent forfeit)
+
+// WRONG — reset only one side:
+botStood: false   // without playerStood: false → asymmetric bug
+```
+
+**Why:** If HIT does not reset both flags, standing becomes a permanent forfeit. The player who stood can never act again even if the opponent keeps hitting. This is a game-breaking bug that has been introduced multiple times — always reset BOTH flags on any HIT.
+
 ### 1. Bot turn continuity
 
 In `src/engine/gameState.js`, the `BOT_ACTION` reducer case **must** keep `roundState` as `BOT_TURN` when the player has already stood and the bot hits or plays a trump:

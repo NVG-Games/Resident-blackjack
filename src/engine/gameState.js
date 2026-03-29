@@ -151,7 +151,7 @@ export function gameReducer(state, action) {
     }
 
     case ACTIONS.PLAYER_HIT: {
-      if (state.roundState !== ROUND_STATE.PLAYER_TURN || state.playerStood) return state;
+      if (state.roundState !== ROUND_STATE.PLAYER_TURN) return state;
       const p1Name = action.playerName || 'You';
       // Check Dead Silence
       if (state.botTableTrumps.some(t => t.type === TRUMP_TYPES.DEAD_SILENCE)) {
@@ -165,29 +165,38 @@ export function gameReducer(state, action) {
       const { card, remaining } = drawCard(state.deck);
       const newHand = [...state.playerHand, card];
       const total = getHandTotal(newHand);
+      const target = getEffectiveTarget([...state.playerTableTrumps, ...state.botTableTrumps]);
+      const bust = total > target;
       const drawMsg = p1Name === 'You'
-        ? `You draw ${card.value}. Total: ${total}.`
-        : `${p1Name} draws ${card.value}. Total: ${total}.`;
+        ? `You draw ${card.value}. Total: ${total}${bust ? ' — BUST!' : '.'}`
+        : `${p1Name} draws ${card.value}. Total: ${total}${bust ? ' — BUST!' : '.'}`;
       const log = [...state.log, { msg: drawMsg, time: Date.now() }];
 
+      // 🚨 HIT resets BOTH stood flags. STAND = skip this turn only.
+      // Round ends only when both stand simultaneously. See AGENTS.md invariant #0.
+      // Exception: bust forces playerStood=true so the round can resolve without
+      // requiring the busted player to manually stand again.
       return {
         ...state,
         playerHand: newHand,
         deck: remaining,
+        playerStood: bust ? true : false,
+        botStood: false,
         roundState: ROUND_STATE.BOT_TURN,
-        botStood: false, // P1 hit resets P2's stand — P2 must decide again
         log,
       };
     }
 
     case ACTIONS.PLAYER_STAND: {
-      if (state.roundState !== ROUND_STATE.PLAYER_TURN || state.playerStood) return state;
+      if (state.roundState !== ROUND_STATE.PLAYER_TURN) return state;
       const p1StandName = action.playerName || 'You';
       const standMsg = p1StandName === 'You' ? 'You stand.' : `${p1StandName} stands.`;
+      // If bot already stood this turn too → both stood simultaneously → auto-resolve fires.
+      // Otherwise pass turn to bot.
       return {
         ...state,
         playerStood: true,
-        roundState: state.botStood ? ROUND_STATE.PLAYER_TURN : ROUND_STATE.BOT_TURN,
+        roundState: ROUND_STATE.BOT_TURN,
         log: [...state.log, { msg: standMsg, time: Date.now() }],
       };
     }
@@ -247,16 +256,14 @@ export function gameReducer(state, action) {
       // revealCard: true in hotseat/online — show the actual card value; false in AI mode — keep bot mystery
       const p2Name = action.botName || 'Hoffman';
       const revealCard = action.revealCard ?? false;
-      // If player already stood, bot keeps BOT_TURN after hit/trump so it can chain actions.
-      // Only revert to PLAYER_TURN once bot stands (auto-resolve then fires).
-      // In hot-seat mode playerStood is reset on bot hit (see below), so nextTurn ends up PLAYER_TURN anyway.
-      const nextTurn = state.playerStood ? ROUND_STATE.BOT_TURN : ROUND_STATE.PLAYER_TURN;
 
       if (botAction === 'stand') {
+        // Bot stands — pass turn back to player.
+        // If player also stood this turn → both stood simultaneously → auto-resolve fires in GameTable.
         return {
           ...state,
           botStood: true,
-          roundState: ROUND_STATE.PLAYER_TURN, // always go to PLAYER_TURN on stand (auto-resolve will handle it)
+          roundState: ROUND_STATE.PLAYER_TURN,
           log: [...state.log, { msg: `${p2Name} stands.`, time: Date.now() }],
         };
       }
@@ -276,19 +283,24 @@ export function gameReducer(state, action) {
         const { card, remaining } = drawCard(state.deck);
         const newHand = [...state.botHand, card];
         const total = getHandTotal(newHand);
+        const target = getEffectiveTarget([...state.playerTableTrumps, ...state.botTableTrumps]);
+        const bust = total > target;
         const hitMsg = revealCard
-          ? `${p2Name} draws ${card.value}. Total: ${total}.`
+          ? `${p2Name} draws ${card.value}. Total: ${total}${bust ? ' — BUST!' : '.'}`
           : `${p2Name} draws. Their total approaches...`;
         const log = [...state.log, { msg: hitMsg, time: Date.now() }];
 
-        // Only reset playerStood if player hasn't stood yet (hot-seat: P2 hit means P1 decides again).
-        // When player already stood (AI mode), keep playerStood=true so auto-resolve can fire.
+        // 🚨 HIT resets BOTH stood flags. STAND = skip this turn only.
+        // Round ends only when both stand simultaneously. See AGENTS.md invariant #0.
+        // Exception: bust forces botStood=true so the round can resolve without
+        // requiring the busted player to manually stand again.
         return {
           ...state,
           botHand: newHand,
           deck: remaining,
-          roundState: nextTurn,
-          playerStood: state.playerStood ? true : false,
+          playerStood: false,
+          botStood: bust ? true : false,
+          roundState: ROUND_STATE.PLAYER_TURN,
           log,
         };
       }
