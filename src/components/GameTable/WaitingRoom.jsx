@@ -59,7 +59,8 @@ export default function WaitingRoom({ isHost, code, onStart, onBack, opponentCon
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4"
+      data-page
+      className="flex items-center justify-center p-4"
       style={{
         background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
         paddingTop: 'max(16px, env(safe-area-inset-top))',

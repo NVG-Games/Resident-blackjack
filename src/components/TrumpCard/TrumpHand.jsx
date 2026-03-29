@@ -111,7 +111,7 @@ export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceC
             </div>
 
             {/* Cards grid */}
-            <div data-scroll style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', overflowY: 'auto', maxHeight: 'calc(60vh - 80px)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
+            <div data-scroll style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center', overflowY: 'auto', maxHeight: 'calc(var(--app-height, 60dvh) * 0.55)', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
               {trumps.map((trump) => (
                 <TrumpCard
                   key={trump.id}

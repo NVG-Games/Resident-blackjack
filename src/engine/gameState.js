@@ -105,12 +105,12 @@ export function gameReducer(state, action) {
 
       if (hasTrumps && state.roundNumber === 0) {
         // First shock phase round — give initial trumps
-        playerTrumpHand = drawNTrumps(2, PLAYER_TRUMP_POOL, 'player');
-        botTrumpHand = drawNTrumps(2, BOT_TRUMP_POOL, 'bot');
+        playerTrumpHand = drawNTrumps(2, PLAYER_TRUMP_POOL, 'player', state.phase);
+        botTrumpHand = drawNTrumps(2, BOT_TRUMP_POOL, 'bot', state.phase);
       } else if (hasTrumps) {
         // Give 1 trump at start of each round
-        playerTrumpHand = [...playerTrumpHand, drawRandomTrump(PLAYER_TRUMP_POOL, 'player')];
-        botTrumpHand = [...botTrumpHand, drawRandomTrump(BOT_TRUMP_POOL, 'bot')];
+        playerTrumpHand = [...playerTrumpHand, drawRandomTrump(PLAYER_TRUMP_POOL, 'player', state.phase)];
+        botTrumpHand = [...botTrumpHand, drawRandomTrump(BOT_TRUMP_POOL, 'bot', state.phase)];
       }
 
       const phaseConfig = PHASE_CONFIG[state.phase];
@@ -152,11 +152,12 @@ export function gameReducer(state, action) {
 
     case ACTIONS.PLAYER_HIT: {
       if (state.roundState !== ROUND_STATE.PLAYER_TURN || state.playerStood) return state;
+      const p1Name = action.playerName || 'You';
       // Check Dead Silence
       if (state.botTableTrumps.some(t => t.type === TRUMP_TYPES.DEAD_SILENCE)) {
         return {
           ...state,
-          log: [...state.log, { msg: 'Dead Silence — you cannot draw!', time: Date.now() }],
+          log: [...state.log, { msg: `Dead Silence — ${p1Name === 'You' ? 'you' : p1Name} cannot draw!`, time: Date.now() }],
         };
       }
       if (state.deck.length === 0) return state;
@@ -164,7 +165,10 @@ export function gameReducer(state, action) {
       const { card, remaining } = drawCard(state.deck);
       const newHand = [...state.playerHand, card];
       const total = getHandTotal(newHand);
-      const log = [...state.log, { msg: `You draw ${card.value}. Total: ${total}.`, time: Date.now() }];
+      const drawMsg = p1Name === 'You'
+        ? `You draw ${card.value}. Total: ${total}.`
+        : `${p1Name} draws ${card.value}. Total: ${total}.`;
+      const log = [...state.log, { msg: drawMsg, time: Date.now() }];
 
       return {
         ...state,
@@ -178,11 +182,13 @@ export function gameReducer(state, action) {
 
     case ACTIONS.PLAYER_STAND: {
       if (state.roundState !== ROUND_STATE.PLAYER_TURN || state.playerStood) return state;
+      const p1StandName = action.playerName || 'You';
+      const standMsg = p1StandName === 'You' ? 'You stand.' : `${p1StandName} stands.`;
       return {
         ...state,
         playerStood: true,
         roundState: state.botStood ? ROUND_STATE.PLAYER_TURN : ROUND_STATE.BOT_TURN,
-        log: [...state.log, { msg: 'You stand.', time: Date.now() }],
+        log: [...state.log, { msg: standMsg, time: Date.now() }],
       };
     }
 
@@ -237,6 +243,10 @@ export function gameReducer(state, action) {
 
     case ACTIONS.BOT_ACTION: {
       const { type: botAction, trump } = action.payload;
+      // botName: display name for the bot/P2 slot (passed from GameTable so log is human-readable)
+      // revealCard: true in hotseat/online — show the actual card value; false in AI mode — keep bot mystery
+      const p2Name = action.botName || 'Hoffman';
+      const revealCard = action.revealCard ?? false;
       // If player already stood, bot keeps BOT_TURN after hit/trump so it can chain actions.
       // Only revert to PLAYER_TURN once bot stands (auto-resolve then fires).
       // In hot-seat mode playerStood is reset on bot hit (see below), so nextTurn ends up PLAYER_TURN anyway.
@@ -247,7 +257,7 @@ export function gameReducer(state, action) {
           ...state,
           botStood: true,
           roundState: ROUND_STATE.PLAYER_TURN, // always go to PLAYER_TURN on stand (auto-resolve will handle it)
-          log: [...state.log, { msg: 'Hoffman stands.', time: Date.now() }],
+          log: [...state.log, { msg: `${p2Name} stands.`, time: Date.now() }],
         };
       }
 
@@ -257,7 +267,7 @@ export function gameReducer(state, action) {
             ...state,
             botStood: true,
             roundState: ROUND_STATE.PLAYER_TURN,
-            log: [...state.log, { msg: 'Dead Silence — Hoffman cannot draw!', time: Date.now() }],
+            log: [...state.log, { msg: `Dead Silence — ${p2Name} cannot draw!`, time: Date.now() }],
           };
         }
         if (state.deck.length === 0) {
@@ -266,7 +276,10 @@ export function gameReducer(state, action) {
         const { card, remaining } = drawCard(state.deck);
         const newHand = [...state.botHand, card];
         const total = getHandTotal(newHand);
-        const log = [...state.log, { msg: `Hoffman draws. His total approaches...`, time: Date.now() }];
+        const hitMsg = revealCard
+          ? `${p2Name} draws ${card.value}. Total: ${total}.`
+          : `${p2Name} draws. Their total approaches...`;
+        const log = [...state.log, { msg: hitMsg, time: Date.now() }];
 
         // Only reset playerStood if player hasn't stood yet (hot-seat: P2 hit means P1 decides again).
         // When player already stood (AI mode), keep playerStood=true so auto-resolve can fire.
@@ -468,6 +481,8 @@ export function gameReducer(state, action) {
       return {
         ...state,
         overlay: {
+          // winner stored raw — GameOverScreen flips perspective for guest
+          winner: w,
           type: w === 'player' ? 'victory' : 'defeat',
           message: w === 'player' ? 'YOU SURVIVE' : 'YOU FALL',
           subMessage: w === 'player'

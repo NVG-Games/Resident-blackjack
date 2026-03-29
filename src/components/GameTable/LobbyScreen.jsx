@@ -130,11 +130,29 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
     setShowNamePrompt(false);
     const action = pendingActionRef.current;
     pendingActionRef.current = null;
-    // Re-trigger the action that was pending
+    // Execute the pending action directly — bypass needsPrompt check since we just saved the name
     if (action === 'fastplay') {
-      setTimeout(() => handleFastPlay(), 0);
+      setTimeout(() => {
+        if (rooms.length > 0) {
+          handleJoinRoom(rooms[0]);
+        } else {
+          const code = generateRoomCode();
+          const seed = generateSeed();
+          setHostCode(code);
+          setHostSeed(seed);
+          setIsHosting(true);
+          initPeer();
+        }
+      }, 0);
     } else {
-      setTimeout(() => handleHostGame(), 0);
+      setTimeout(() => {
+        const code = generateRoomCode();
+        const seed = generateSeed();
+        setHostCode(code);
+        setHostSeed(seed);
+        setIsHosting(true);
+        initPeer();
+      }, 0);
     }
   };
 
@@ -207,14 +225,11 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
     {showNamePrompt && <NamePrompt onSave={handleNameSave} />}
     <div
       ref={containerRef}
+      data-page
       style={{
-        minHeight: '100dvh',
         display: 'flex',
         flexDirection: 'column',
         background: 'radial-gradient(ellipse at 50% 30%, #110d08 0%, #080604 100%)',
-        overflowY: 'auto',
-        WebkitOverflowScrolling: 'touch',
-        touchAction: 'pan-y',
       }}
     >
       {/* Desktop: two-column layout wrapper */}
@@ -358,7 +373,7 @@ export default function LobbyScreen({ onBack, onHostReady, onJoinReady, onGhostG
               </button>
             </div>
 
-            <div style={{ borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,209,82,0.08)', minHeight: 200, flex: 1 }}>
+            <div data-scroll style={{ borderRadius: 6, background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,209,82,0.08)', minHeight: 200, maxHeight: 340, overflowY: 'auto', flex: 1 }}>
               {loading && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 200, fontFamily: 'Cinzel, serif', color: '#7a6a50', fontSize: 18, fontStyle: 'italic' }}>
                   Scanning…

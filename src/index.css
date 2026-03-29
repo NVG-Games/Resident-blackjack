@@ -14,11 +14,17 @@
     font-size: 18px;
   }
 
+  :root {
+    /* Fallback: dynamic viewport height for regular browsers.
+       In Telegram, main.jsx overwrites this with viewportStableHeight
+       so the layout never goes behind Telegram's UI chrome. */
+    --app-height: 100dvh;
+  }
+
   html, body, #root {
     width: 100%;
     height: 100%;
-    /* Use dvh for mobile browsers with dynamic toolbars */
-    height: 100dvh;
+    height: var(--app-height);
     overflow: hidden;
     background: #080604;
   }
@@ -43,6 +49,18 @@
   [data-scroll] {
     -webkit-overflow-scrolling: touch;
     touch-action: pan-y;
+    /* Prevent iOS from blocking scroll in nested overflow:auto containers */
+    overscroll-behavior: contain;
+  }
+
+  /* Full-screen page containers that scroll their own content */
+  [data-page] {
+    width: 100%;
+    height: var(--app-height, 100dvh);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
   }
 }
 

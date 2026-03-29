@@ -141,14 +141,29 @@ export default function Card({
   const cardRef = useRef(null);
   const innerRef = useRef(null);
 
-  // Flip animation when faceDown changes to false (hole card reveal)
+  // Flip animation when faceDown → false (hole card reveal).
+  // JSX conditionally renders CardFace/CardBack, so on the reveal transition
+  // React mounts CardFace before GSAP starts. We hide it immediately via
+  // visibility:hidden on the wrapper, then unhide + animate in one tick.
   const prevFaceDown = useRef(faceDown);
+  const flipPendingRef = useRef(false);
+
   useEffect(() => {
-    if (prevFaceDown.current === true && faceDown === false && innerRef.current) {
-      gsap.fromTo(innerRef.current,
-        { rotateY: 90 },
-        { rotateY: 0, duration: 0.4, ease: 'power2.out', clearProps: 'rotateY' }
-      );
+    if (!innerRef.current) return;
+    if (prevFaceDown.current === true && faceDown === false) {
+      flipPendingRef.current = true;
+      // Hide before the browser paints the newly-mounted CardFace
+      innerRef.current.style.visibility = 'hidden';
+      // rAF: run after the browser has painted the hidden frame, then animate
+      requestAnimationFrame(() => {
+        if (!innerRef.current) return;
+        innerRef.current.style.visibility = '';
+        gsap.fromTo(innerRef.current,
+          { rotateY: 90 },
+          { rotateY: 0, duration: 0.4, ease: 'power2.out', clearProps: 'rotateY' }
+        );
+        flipPendingRef.current = false;
+      });
     }
     prevFaceDown.current = faceDown;
   }, [faceDown]);
@@ -198,7 +213,6 @@ export default function Card({
           width: '100%',
           height: '100%',
           position: 'relative',
-          transformStyle: 'preserve-3d',
           borderRadius: '6px',
           boxShadow: '0 4px 20px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.5)',
         }}

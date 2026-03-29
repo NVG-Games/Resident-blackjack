@@ -67,8 +67,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     const unsub = onData((action) => {
       if (!action?.type) return;
       if (action.type === 'HOST_TIMEOUT') {
-        // Host abandoned the round — guest returns to menu
-        onReturnToMenu?.();
+        // Legacy: older host clients send this on timeout instead of NEXT_ROUND — just ignore
         return;
       }
       if (action.type === 'SHOW_FINAL_OVERLAY') {
@@ -353,10 +352,10 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           clearInterval(interval);
           // Auto-stand
           if (isOnline) {
-            if (isHost) syncedDispatch({ type: ACTIONS.PLAYER_STAND });
-            else syncedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
+            if (isHost) syncedDispatch({ type: ACTIONS.PLAYER_STAND, playerName: player1Name });
+            else syncedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' }, botName: player2Name, revealCard: true });
           } else {
-            dispatch({ type: ACTIONS.PLAYER_STAND });
+            dispatch({ type: ACTIONS.PLAYER_STAND, playerName: player1Name });
           }
           return null;
         }
@@ -369,25 +368,25 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
 
   // Player 1 actions (PLAYER_TURN) — mirrored to peer in online mode
   const handleHit = useCallback(() => {
-    guardedDispatch({ type: ACTIONS.PLAYER_HIT });
-  }, [guardedDispatch]);
+    guardedDispatch({ type: ACTIONS.PLAYER_HIT, playerName: player1Name });
+  }, [guardedDispatch, player1Name]);
   const handleStand = useCallback(() => {
-    guardedDispatch({ type: ACTIONS.PLAYER_STAND });
-  }, [guardedDispatch]);
+    guardedDispatch({ type: ACTIONS.PLAYER_STAND, playerName: player1Name });
+  }, [guardedDispatch, player1Name]);
   const handlePlayTrump = useCallback((trump) => {
     guardedDispatch({ type: ACTIONS.PLAYER_USE_TRUMP, trump });
   }, [guardedDispatch]);
 
   // Player 2 actions (hot-seat / online guest)
   const handleBotHit = useCallback(() => {
-    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'hit' } });
-  }, [guardedDispatch]);
+    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'hit' }, botName: player2Name, revealCard: true });
+  }, [guardedDispatch, player2Name]);
   const handleBotStand = useCallback(() => {
-    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
-  }, [guardedDispatch]);
+    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' }, botName: player2Name, revealCard: true });
+  }, [guardedDispatch, player2Name]);
   const handleBotPlayTrump = useCallback((trump) => {
-    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump } });
-  }, [guardedDispatch]);
+    guardedDispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'trump', trump }, botName: player2Name, revealCard: true });
+  }, [guardedDispatch, player2Name]);
 
   const { roundState, overlay, roundResult, gameOver } = state;
   // Show RoundResult for the final round too — don't skip it when gameOver
@@ -435,11 +434,10 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
         peerSend({ type: 'SHOW_FINAL_OVERLAY' });
         return;
       }
-      // Notify guest so they also go to menu
-      peerSend({ type: 'HOST_TIMEOUT' });
-      onReturnToMenu?.();
+      // Auto-advance to next round for both players (don't kick anyone out)
+      syncedDispatch({ type: ACTIONS.NEXT_ROUND });
     }
-  }, [isOnline, isHost, gameOver, peerSend, onReturnToMenu, syncedDispatch]);
+  }, [isOnline, isHost, gameOver, peerSend, syncedDispatch]);
 
   const handleHandoffReady = useCallback((who) => {
     if (isHotSeat) setConfirmedPlayer(who);
@@ -583,8 +581,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       {/* Main game layout — flex row: game column + desktop log sidebar */}
       <div className="relative z-20 flex h-full" style={{ paddingTop: 12 }}>
 
-        {/* Game column — takes all space on mobile, leaves room for sidebar on desktop */}
-        <div className="flex flex-col flex-1 min-w-0 h-full">
+        {/* Game column — scrollable on mobile so action buttons are always reachable */}
+        <div className="flex flex-col flex-1 min-w-0 h-full" style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-y' }}>
 
         {/* TOP: Bet panel */}
         <section className="flex-none w-full px-3 sm:px-6">
@@ -661,8 +659,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
           </div>
         </section>
 
-        {/* ACTION BUTTONS — in flow, at the bottom of flex column */}
-        <div className="flex-none z-30 mt-auto" style={{ background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: '0 12px max(12px, env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {/* ACTION BUTTONS — sticky to bottom so they're always visible on mobile */}
+        <div className="flex-none z-30" style={{ position: 'sticky', bottom: 0, background: 'rgba(8,6,4,0.97)', borderTop: '1px solid rgba(255,209,82,0.1)', padding: `0 12px max(12px, env(safe-area-inset-bottom))`, display: 'flex', flexDirection: 'column', gap: 8 }}>
         {/* Top info row — fixed height 64px, always occupies space */}
         {(() => {
           if (turnSecondsLeft !== null) {

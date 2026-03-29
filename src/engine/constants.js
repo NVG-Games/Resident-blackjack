@@ -406,6 +406,68 @@ export const TRUMP_DEFINITIONS = {
   },
 };
 
+// Trump weight table — controls drop rate per phase.
+// Weight 10 = normal. 0 = never. Relative: a card with weight 20 is 2× more likely than weight 10.
+// Powerful/broken cards are locked to SAW only with low weight (1-2 out of ~100+ total pool weight).
+export const TRUMP_WEIGHTS = {
+  // ── Broken / game-ending ────────────────────────────────
+  // ESCAPE: auto-wins the round if still on table at resolution
+  [TRUMP_TYPES.ESCAPE]:             { FINGER: 0, SHOCK: 0, SAW: 1 },
+  // DESPERATION: both bets +100 AND opponent can't draw — insta-win combo
+  [TRUMP_TYPES.DESPERATION]:       { FINGER: 0, SHOCK: 0, SAW: 1 },
+  // BLACK_MAGIC: draw best card + opponent bet +10
+  [TRUMP_TYPES.BLACK_MAGIC]:       { FINGER: 0, SHOCK: 0, SAW: 2 },
+  // TWENTY_ONE_UP: opponent bet +21 on a natural 21 — one-shot potential
+  [TRUMP_TYPES.TWENTY_ONE_UP]:     { FINGER: 0, SHOCK: 0, SAW: 2 },
+  // DEAD_SILENCE: opponent literally cannot draw any card
+  [TRUMP_TYPES.DEAD_SILENCE]:      { FINGER: 0, SHOCK: 0, SAW: 3 },
+  // DESTROY++: wipes all opponent trumps + blocks trump use for the round
+  [TRUMP_TYPES.DESTROY_PLUS_PLUS]: { FINGER: 0, SHOCK: 0, SAW: 3 },
+  // MIND_SHIFT+: opponent loses ALL trumps at end of round
+  [TRUMP_TYPES.MIND_SHIFT_PLUS]:   { FINGER: 0, SHOCK: 0, SAW: 3 },
+  // OBLIVION: cancels the round — tempo tool that erases opponent progress
+  [TRUMP_TYPES.OBLIVION]:          { FINGER: 0, SHOCK: 0, SAW: 4 },
+  // ULTIMATE_DRAW: best card + draw 2 more trumps — snowball machine
+  [TRUMP_TYPES.ULTIMATE_DRAW]:     { FINGER: 0, SHOCK: 0, SAW: 4 },
+
+  // ── Strong but fair in later game ───────────────────────
+  [TRUMP_TYPES.DESTROY_PLUS]:      { FINGER: 0, SHOCK: 3,  SAW: 8 },
+  [TRUMP_TYPES.MIND_SHIFT]:        { FINGER: 0, SHOCK: 4,  SAW: 8 },
+  [TRUMP_TYPES.DESIRE_PLUS]:       { FINGER: 0, SHOCK: 4,  SAW: 8 },
+  [TRUMP_TYPES.TWO_UP_PLUS]:       { FINGER: 0, SHOCK: 5,  SAW: 10 },
+  [TRUMP_TYPES.PERFECT_DRAW_PLUS]: { FINGER: 0, SHOCK: 5,  SAW: 10 },
+  [TRUMP_TYPES.TRUMP_SWITCH_PLUS]: { FINGER: 0, SHOCK: 5,  SAW: 10 },
+  [TRUMP_TYPES.SHIELD_PLUS]:       { FINGER: 0, SHOCK: 5,  SAW: 10 },
+  [TRUMP_TYPES.CONJURE]:           { FINGER: 0, SHOCK: 5,  SAW: 8 },
+  [TRUMP_TYPES.SHIELD_ASSAULT_PLUS]:{ FINGER: 0, SHOCK: 6, SAW: 10 },
+
+  // ── Normal cards — appear in both SHOCK and SAW ─────────
+  [TRUMP_TYPES.ONE_UP]:            { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.TWO_UP]:            { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.SHIELD]:            { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.DESTROY]:           { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.GO_FOR_17]:         { FINGER: 0, SHOCK: 8,  SAW: 8 },
+  [TRUMP_TYPES.GO_FOR_24]:         { FINGER: 0, SHOCK: 8,  SAW: 8 },
+  [TRUMP_TYPES.GO_FOR_27]:         { FINGER: 0, SHOCK: 6,  SAW: 8 },
+  [TRUMP_TYPES.HARVEST]:           { FINGER: 0, SHOCK: 8,  SAW: 8 },
+  [TRUMP_TYPES.DESIRE]:            { FINGER: 0, SHOCK: 8,  SAW: 10 },
+  [TRUMP_TYPES.HAPPINESS]:         { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.CARD_2]:            { FINGER: 0, SHOCK: 10, SAW: 8 },
+  [TRUMP_TYPES.CARD_3]:            { FINGER: 0, SHOCK: 10, SAW: 8 },
+  [TRUMP_TYPES.CARD_4]:            { FINGER: 0, SHOCK: 10, SAW: 8 },
+  [TRUMP_TYPES.CARD_5]:            { FINGER: 0, SHOCK: 10, SAW: 8 },
+  [TRUMP_TYPES.CARD_6]:            { FINGER: 0, SHOCK: 10, SAW: 8 },
+  [TRUMP_TYPES.CARD_7]:            { FINGER: 0, SHOCK: 6,  SAW: 6 },
+  [TRUMP_TYPES.REMOVE]:            { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.RETURN]:            { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.EXCHANGE]:          { FINGER: 0, SHOCK: 8,  SAW: 8 },
+  [TRUMP_TYPES.TRUMP_SWITCH]:      { FINGER: 0, SHOCK: 8,  SAW: 8 },
+  [TRUMP_TYPES.PERFECT_DRAW]:      { FINGER: 0, SHOCK: 10, SAW: 10 },
+  [TRUMP_TYPES.CURSE]:             { FINGER: 0, SHOCK: 8,  SAW: 10 },
+  [TRUMP_TYPES.LOVE_YOUR_ENEMY]:   { FINGER: 0, SHOCK: 6,  SAW: 6 },
+  [TRUMP_TYPES.SHIELD_ASSAULT]:    { FINGER: 0, SHOCK: 6,  SAW: 8 },
+};
+
 // Player-accessible trumps (not enemy-exclusive)
 export const PLAYER_TRUMP_POOL = [
   TRUMP_TYPES.ONE_UP,
@@ -423,6 +485,21 @@ export const PLAYER_TRUMP_POOL = [
   TRUMP_TYPES.PERFECT_DRAW,
   TRUMP_TYPES.GO_FOR_17,
   TRUMP_TYPES.GO_FOR_24,
+  // Advanced — SAW-only or low-weight on SHOCK
+  TRUMP_TYPES.ESCAPE,
+  TRUMP_TYPES.TWENTY_ONE_UP,
+  TRUMP_TYPES.DEAD_SILENCE,
+  TRUMP_TYPES.DESTROY,
+  TRUMP_TYPES.DESTROY_PLUS,
+  TRUMP_TYPES.DESTROY_PLUS_PLUS,
+  TRUMP_TYPES.PERFECT_DRAW_PLUS,
+  TRUMP_TYPES.ULTIMATE_DRAW,
+  TRUMP_TYPES.OBLIVION,
+  TRUMP_TYPES.SHIELD_PLUS,
+  TRUMP_TYPES.MIND_SHIFT,
+  TRUMP_TYPES.MIND_SHIFT_PLUS,
+  TRUMP_TYPES.CONJURE,
+  TRUMP_TYPES.BLACK_MAGIC,
 ];
 
 // Enemy bot trump pool
@@ -441,4 +518,13 @@ export const BOT_TRUMP_POOL = [
   TRUMP_TYPES.DESIRE,
   TRUMP_TYPES.MIND_SHIFT,
   TRUMP_TYPES.HAPPINESS,
+  // Advanced — SAW-only or low-weight on SHOCK
+  TRUMP_TYPES.ESCAPE,
+  TRUMP_TYPES.DEAD_SILENCE,
+  TRUMP_TYPES.DESTROY_PLUS,
+  TRUMP_TYPES.DESTROY_PLUS_PLUS,
+  TRUMP_TYPES.MIND_SHIFT_PLUS,
+  TRUMP_TYPES.OBLIVION,
+  TRUMP_TYPES.TWENTY_ONE_UP,
+  TRUMP_TYPES.BLACK_MAGIC,
 ];

@@ -104,10 +104,11 @@ export default function App() {
   useEffect(() => {
     const unsub = onClose(() => {
       setScreen((s) => {
-        // Show modal if we're in any online-related screen
-        if (s === 'game' || s === 'waiting' || s === 'lobby') {
+        // Only show disconnect modal in lobby/waiting — during an active game
+        // PeerJS may briefly close/reopen the connection on network hiccups,
+        // so we don't interrupt the game session automatically.
+        if (s === 'waiting' || s === 'lobby') {
           setShowDisconnectModal(true);
-          setOnlineState(null);
         }
         return s;
       });
@@ -143,8 +144,8 @@ export default function App() {
 
   return (
     <div
-      className="grain w-screen h-screen overflow-hidden"
-      style={{ background: '#0d0805', height: '100dvh' }}
+      className="grain w-screen overflow-hidden"
+      style={{ background: '#0d0805', height: 'var(--app-height, 100dvh)' }}
     >
       {/* Disconnect modal */}
       {showDisconnectModal && (

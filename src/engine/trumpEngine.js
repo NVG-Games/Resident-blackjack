@@ -1,4 +1,4 @@
-import { TRUMP_TYPES, TRUMP_DEFINITIONS, PERMANENT_TRUMPS, MAX_TABLE_TRUMPS, PLAYER_TRUMP_POOL, BOT_TRUMP_POOL } from './constants.js';
+import { TRUMP_TYPES, TRUMP_DEFINITIONS, PERMANENT_TRUMPS, MAX_TABLE_TRUMPS, PLAYER_TRUMP_POOL, BOT_TRUMP_POOL, TRUMP_WEIGHTS } from './constants.js';
 import { drawBestCard, drawSpecificCard, drawWorstCard, getHandTotal } from './deck.js';
 
 let trumpIdCounter = 0;
@@ -11,13 +11,34 @@ export function createTrump(type, owner = 'player') {
   };
 }
 
-export function drawRandomTrump(pool = PLAYER_TRUMP_POOL, owner = 'player') {
-  const type = pool[Math.floor(Math.random() * pool.length)];
+// Draw a random trump respecting phase weights.
+// phase: 'FINGER' | 'SHOCK' | 'SAW' | undefined (undefined = equal weights, used in tests/fallback)
+export function drawRandomTrump(pool = PLAYER_TRUMP_POOL, owner = 'player', phase) {
+  if (!phase) {
+    // No phase context — flat random (first-round deal before phase is set, or tests)
+    const type = pool[Math.floor(Math.random() * pool.length)];
+    return createTrump(type, owner);
+  }
+
+  // Build weighted list: each card appears proportionally to its weight for this phase
+  const weighted = [];
+  for (const type of pool) {
+    const w = TRUMP_WEIGHTS[type]?.[phase] ?? 10;
+    for (let i = 0; i < w; i++) weighted.push(type);
+  }
+
+  if (weighted.length === 0) {
+    // All weights are 0 for this phase — fall back to flat random (shouldn't happen with valid pools)
+    const type = pool[Math.floor(Math.random() * pool.length)];
+    return createTrump(type, owner);
+  }
+
+  const type = weighted[Math.floor(Math.random() * weighted.length)];
   return createTrump(type, owner);
 }
 
-export function drawNTrumps(n, pool, owner) {
-  return Array.from({ length: n }, () => drawRandomTrump(pool, owner));
+export function drawNTrumps(n, pool, owner, phase) {
+  return Array.from({ length: n }, () => drawRandomTrump(pool, owner, phase));
 }
 
 // Compute effective target based on table trumps
@@ -94,6 +115,7 @@ export function applyTrump(trump, state, owner) {
   const myHeld = isPlayer ? playerTrumpHand : botTrumpHand;
   const oppHeld = isPlayer ? botTrumpHand : playerTrumpHand;
   const pool = isPlayer ? PLAYER_TRUMP_POOL : BOT_TRUMP_POOL;
+  const phase = state.phase; // used for phase-weighted trump draws
 
   const target = getEffectiveTarget([...playerTableTrumps, ...botTableTrumps]);
   const myTotal = getHandTotal(myHand);
@@ -154,15 +176,15 @@ export function applyTrump(trump, state, owner) {
     // --- Permanent effects that also trigger immediate actions ---
     case TRUMP_TYPES.ONE_UP:
       addLog(`${isPlayer ? 'You play' : 'Hoffman plays'} One-Up — the stakes rise!`);
-      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       break;
     case TRUMP_TYPES.TWO_UP:
       addLog(`${isPlayer ? 'You play' : 'Hoffman plays'} Two-Up — bet surges!`);
-      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       break;
     case TRUMP_TYPES.TWO_UP_PLUS: {
       addLog(`${isPlayer ? 'You play' : 'Hoffman plays'} Two-Up+ — a card is torn away!`);
-      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       // Return opponent's last face-up card to deck
       const faceUpCards = newOppHand.slice(1);
       if (faceUpCards.length > 0) {
@@ -223,7 +245,7 @@ export function applyTrump(trump, state, owner) {
       break;
     case TRUMP_TYPES.CONJURE: {
       addLog(`${isPlayer ? 'You play' : 'Hoffman plays'} Conjure — three new cards!`);
-      const drawn = drawNTrumps(3, pool, owner);
+      const drawn = drawNTrumps(3, pool, owner, phase);
       newMyHeld = [...newMyHeld, ...drawn];
       break;
     }
@@ -258,8 +280,8 @@ export function applyTrump(trump, state, owner) {
       break;
     case TRUMP_TYPES.HAPPINESS: {
       addLog(`${isPlayer ? 'You play' : 'Hoffman plays'} Happiness — everyone draws!`);
-      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
-      newOppHeld = [...newOppHeld, drawRandomTrump(isPlayer ? BOT_TRUMP_POOL : PLAYER_TRUMP_POOL, isPlayer ? 'bot' : 'player')];
+      newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
+      newOppHeld = [...newOppHeld, drawRandomTrump(isPlayer ? BOT_TRUMP_POOL : PLAYER_TRUMP_POOL, isPlayer ? 'bot' : 'player', phase)];
       break;
     }
 
@@ -282,7 +304,7 @@ export function applyTrump(trump, state, owner) {
       }
       // Harvest effect
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
         addLog('Harvest — another trump drawn!');
       }
       break;
@@ -298,7 +320,7 @@ export function applyTrump(trump, state, owner) {
         addLog('No face-up card to remove.');
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -311,7 +333,7 @@ export function applyTrump(trump, state, owner) {
         addLog(`${isPlayer ? 'You return' : 'Hoffman returns'} the ${returned.value} to the deck.`);
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -326,7 +348,7 @@ export function applyTrump(trump, state, owner) {
         addLog(`Cards exchanged! ${myLast.value} ↔ ${oppLast.value}`);
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -334,7 +356,7 @@ export function applyTrump(trump, state, owner) {
       const discardCount = Math.min(2, newMyHeld.length);
       const shuffled = [...newMyHeld].sort(() => Math.random() - 0.5);
       newMyHeld = shuffled.slice(discardCount);
-      const drawn = drawNTrumps(3, pool, owner);
+      const drawn = drawNTrumps(3, pool, owner, phase);
       newMyHeld = [...newMyHeld, ...drawn];
       addLog(`${isPlayer ? 'You switch' : 'Hoffman switches'} trumps!`);
       break;
@@ -343,7 +365,7 @@ export function applyTrump(trump, state, owner) {
       const discardCount = Math.min(1, newMyHeld.length);
       const shuffled = [...newMyHeld].sort(() => Math.random() - 0.5);
       newMyHeld = shuffled.slice(discardCount);
-      const drawn = drawNTrumps(4, pool, owner);
+      const drawn = drawNTrumps(4, pool, owner, phase);
       newMyHeld = [...newMyHeld, ...drawn];
       addLog(`${isPlayer ? 'You play' : 'Hoffman plays'} Trump Switch+!`);
       break;
@@ -356,7 +378,7 @@ export function applyTrump(trump, state, owner) {
         addLog(`${isPlayer ? 'Perfect Draw!' : 'Hoffman draws perfectly!'} Drew ${card.value}.`);
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -369,7 +391,7 @@ export function applyTrump(trump, state, owner) {
       }
       // Note: already placed on table by the permanent-trump block above — no double-push needed
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -380,10 +402,10 @@ export function applyTrump(trump, state, owner) {
         newDeck = remaining;
         addLog(`ULTIMATE DRAW! ${isPlayer ? 'You' : 'Hoffman'} drew ${card.value}!`);
       }
-      const extraTrumps = drawNTrumps(2, pool, owner);
+      const extraTrumps = drawNTrumps(2, pool, owner, phase);
       newMyHeld = [...newMyHeld, ...extraTrumps];
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -401,7 +423,7 @@ export function applyTrump(trump, state, owner) {
         addLog(`Curse! ${isPlayer ? 'Hoffman' : 'You'} ${isPlayer ? 'is' : 'are'} forced to take the ${card.value}!`);
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
@@ -414,7 +436,7 @@ export function applyTrump(trump, state, owner) {
         addLog(`Opponent drew ${card.value} — the best card for them.`);
       }
       if (myTableTrumps.some(t => t.type === TRUMP_TYPES.HARVEST)) {
-        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner)];
+        newMyHeld = [...newMyHeld, drawRandomTrump(pool, owner, phase)];
       }
       break;
     }
