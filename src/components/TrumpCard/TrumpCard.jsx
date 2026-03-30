@@ -17,6 +17,7 @@ export default function TrumpCard({
   const [showTooltip, setShowTooltip] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
   const def = TRUMP_DEFINITIONS[trump.type] || {};
   const isPermanent = PERMANENT_TRUMPS.has(trump.type);
   const imgSrc = TRUMP_IMAGES[trump.type];
@@ -37,14 +38,12 @@ export default function TrumpCard({
 
 
   const handleClick = () => {
-    if (disabled) return;
-    if (isOnTable) {
+    setShowTooltip(false);
+    if (isOnTable || disabled) {
       setShowInfo(true);
-      setShowTooltip(false);
       return;
     }
     setShowConfirm(true);
-    setShowTooltip(false);
   };
 
   const handleConfirmUse = (e) => {
@@ -75,16 +74,22 @@ export default function TrumpCard({
     <div className={`relative select-none ${className}`} style={{ display: 'inline-block' }}>
       <div
         ref={cardRef}
-        role={!disabled ? 'button' : undefined}
-        tabIndex={!disabled ? 0 : undefined}
+        role="button"
+        tabIndex={0}
         onClick={handleClick}
-        onMouseEnter={() => setShowTooltip(true)}
+        onMouseEnter={() => {
+          if (cardRef.current) {
+            const rect = cardRef.current.getBoundingClientRect();
+            setTooltipPos({ x: rect.left + rect.width / 2, y: rect.top });
+          }
+          setShowTooltip(true);
+        }}
         onMouseLeave={() => setShowTooltip(false)}
         onTouchStart={(e) => { e.stopPropagation(); setShowTooltip(true); }}
         onTouchEnd={(e) => { e.stopPropagation(); setTimeout(() => setShowTooltip(false), 1500); }}
         className={`relative transition-all duration-150 rounded ${
           disabled
-            ? 'opacity-40 cursor-not-allowed'
+            ? 'opacity-40 cursor-pointer'
             : isOnTable
               ? 'cursor-pointer hover:scale-105'
               : 'cursor-pointer hover:scale-105 hover:-translate-y-1'
@@ -140,26 +145,49 @@ export default function TrumpCard({
         )}
       </div>
 
-      {/* Tooltip — desktop hover only, hidden when confirm is showing */}
-      {showTooltip && !showConfirm && !isOnTable && (
-        <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none"
-          style={{ width: '200px' }}>
-          <div className="bg-stone-950 rounded-md p-3 shadow-2xl"
-            style={{ boxShadow: '0 0 20px rgba(0,0,0,0.95)', border: '1px solid rgba(255,209,82,0.15)' }}>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 16, fontWeight: 700, color: '#fbbf24', marginBottom: 4 }}>
+      {/* Tooltip — desktop hover, rendered via portal so it's never clipped by overflow:hidden */}
+      {showTooltip && !showConfirm && !isOnTable && createPortal(
+        <div
+          className="pointer-events-none"
+          style={{
+            position: 'fixed',
+            left: tooltipPos.x,
+            top: tooltipPos.y - 8,
+            transform: 'translate(-50%, -100%)',
+            zIndex: 9999,
+            width: 220,
+          }}
+        >
+          <div style={{
+            background: '#0e0c09',
+            borderRadius: 8,
+            padding: '12px 14px',
+            boxShadow: '0 0 24px rgba(0,0,0,0.98)',
+            border: '1px solid rgba(255,209,82,0.2)',
+          }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 15, fontWeight: 700, color: '#fbbf24', marginBottom: 6 }}>
               {def.name}
             </div>
-            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 15, color: '#c4b9a8', lineHeight: 1.5 }}>
+            <div style={{ fontFamily: 'Cinzel, serif', fontSize: 13, color: '#c4b9a8', lineHeight: 1.55 }}>
               {def.description}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, fontFamily: 'Cinzel, serif', fontSize: 14, color: '#c4b9a8' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 8, fontFamily: 'Cinzel, serif', fontSize: 12, color: '#7a6a50' }}>
               <span>{isPermanent ? '📌' : '⚡'}</span>
               <span>{isPermanent ? 'Stays on table' : 'Instant effect'}</span>
             </div>
           </div>
-          <div className="absolute bottom-[-5px] left-1/2 -translate-x-1/2
-            w-2.5 h-2.5 bg-stone-950 border-r border-b rotate-45" style={{ borderColor: 'rgba(255,209,82,0.15)' }} />
-        </div>
+          <div style={{
+            position: 'absolute',
+            bottom: -5,
+            left: '50%',
+            transform: 'translateX(-50%) rotate(45deg)',
+            width: 10, height: 10,
+            background: '#0e0c09',
+            borderRight: '1px solid rgba(255,209,82,0.2)',
+            borderBottom: '1px solid rgba(255,209,82,0.2)',
+          }} />
+        </div>,
+        document.body
       )}
 
       {/* Info modal — for table cards (read-only) */}
