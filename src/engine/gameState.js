@@ -190,12 +190,12 @@ export function gameReducer(state, action) {
       if (state.roundState !== ROUND_STATE.PLAYER_TURN) return state;
       const p1StandName = action.playerName || 'You';
       const standMsg = p1StandName === 'You' ? 'You stand.' : `${p1StandName} stands.`;
-      // If bot already stood this turn too → both stood simultaneously → auto-resolve fires.
-      // Otherwise pass turn to bot.
+      // If bot already stood → both stood simultaneously → keep PLAYER_TURN so auto-resolve fires.
+      // Otherwise pass turn to bot (BOT_TURN) so they can respond.
       return {
         ...state,
         playerStood: true,
-        roundState: ROUND_STATE.BOT_TURN,
+        roundState: state.botStood ? ROUND_STATE.PLAYER_TURN : ROUND_STATE.BOT_TURN,
         log: [...state.log, { msg: standMsg, time: Date.now() }],
       };
     }
