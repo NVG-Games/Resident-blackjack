@@ -513,14 +513,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     ? (showBotControls ? player2Name : player1Name)
     : player1Name;
 
-  // Trump hand to show: only your own trumps, only when it's your turn.
-  // In online mode hide entirely when it's the opponent's turn — never expose opponent's trump hand.
-  const isMyOnlineTurn = isOnline && (isHost ? isPlayerTurn : isBotTurn);
-  const activeTrumpHand = showBotControls
-    ? state.botTrumpHand
-    : isOnline && !isMyOnlineTurn
-      ? []   // hide trump hand completely when it's the opponent's turn online
-      : state.playerTrumpHand;
+  // Trump hand to show: always your own trumps (for preview), never the opponent's.
+  const activeTrumpHand = showBotControls ? state.botTrumpHand : state.playerTrumpHand;
   const activeTrumpHandler = showBotControls ? handleBotPlayTrump : handlePlayTrump;
   // Trumps can be played anytime it's your turn (even after standing) — only block on opponent's turn.
   // Online guest plays from the "bot" slot, so their turn is isBotTurn (not hotSeatBotActive, which is
@@ -699,6 +693,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
               disabled={activeTrumpDisabled}
               roundState={roundState}
               forceCanPlay={showBotControls}
+              isGuestTurn={isOnline && !isHost && isBotTurn}
             />
           </div>
         </section>

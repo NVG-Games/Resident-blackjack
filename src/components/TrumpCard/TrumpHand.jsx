@@ -4,12 +4,12 @@ import { gsap } from 'gsap';
 import TrumpCard from './TrumpCard.jsx';
 import { ROUND_STATE } from '../../engine/gameState.js';
 
-export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceCanPlay = false }) {
+export default function TrumpHand({ trumps, onPlay, disabled, roundState, forceCanPlay = false, isGuestTurn = false }) {
   const containerRef = useRef(null);
   const [open, setOpen] = useState(false);
-  // Trumps can be played anytime it's your turn (PLAYER_TURN), including after standing.
-  // disabled flag controls per-player blocking (opponent's turn, hotseat not confirmed, etc.)
-  const isYourTurn = roundState === ROUND_STATE.PLAYER_TURN;
+  // Trumps can be played anytime it's your turn, including after standing.
+  // For online guest their turn is BOT_TURN, not PLAYER_TURN — isGuestTurn handles that.
+  const isYourTurn = roundState === ROUND_STATE.PLAYER_TURN || isGuestTurn;
   const canPlay = forceCanPlay || (!disabled && isYourTurn);
 
   useEffect(() => {
