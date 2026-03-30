@@ -141,7 +141,7 @@ export default function TrumpCard({
       </div>
 
       {/* Tooltip — desktop hover only, hidden when confirm is showing */}
-      {showTooltip && !showConfirm && !disabled && !isOnTable && (
+      {showTooltip && !showConfirm && !isOnTable && (
         <div className="absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 pointer-events-none"
           style={{ width: '200px' }}>
           <div className="bg-stone-950 rounded-md p-3 shadow-2xl"
