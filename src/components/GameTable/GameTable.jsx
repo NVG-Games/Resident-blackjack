@@ -231,9 +231,8 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   useEffect(() => {
     if (!isHotSeat && !isOnline) return;
     if (isOnline) {
-      if (isHost) return;
-      if (state.roundState === ROUND_STATE.BOT_TURN) setHotSeatBotActive(true);
-      else setHotSeatBotActive(false);
+      // Guest activation is derived directly in render — no setState needed here.
+      // (hotSeatBotActive for online guest = isBotTurn, computed below)
       return;
     }
     const prev = prevRoundStateRef.current;
@@ -352,7 +351,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     if (isHotSeat) return;
     if (state.gameOver) return;
     const isMyTurn = isOnline
-      ? (isHost ? isPlayerTurn : isBotTurn && hotSeatBotActive)
+      ? (isHost ? isPlayerTurn : isBotTurn)
       : isPlayerTurn;
     if (!isMyTurn) { setTurnSecondsLeft(null); return; }
 
@@ -375,7 +374,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     }, 1000);
     return () => clearInterval(interval);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.roundState, state.gameOver, isHotSeat, isOnline, isHost, hotSeatBotActive]);
+  }, [state.roundState, state.gameOver, isHotSeat, isOnline, isHost]);
 
   // Player 1 actions (PLAYER_TURN) — mirrored to peer in online mode
   const handleHit = useCallback(() => {
@@ -488,8 +487,9 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const handoffTarget = activeIsP1 ? player1Name : player2Name; // who to pass to
 
   // Bot controls: P2's turn and P2 confirmed (regardless of botStood)
+  // Online guest: derived directly from isBotTurn — no intermediate useState to desync.
   const showBotControls = isOnline
-    ? (isBotTurn && hotSeatBotActive)
+    ? (!isHost && isBotTurn)
     : isHotSeat
       ? (isBotTurn && confirmedPlayer === 'p2')
       : false;
@@ -498,7 +498,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
   const isActionDisabled = isHotSeat
     ? !isPlayerTurn || confirmedPlayer !== 'p1'
     : isOnline
-      ? (isHost ? !isPlayerTurn : !isBotTurn || !hotSeatBotActive)
+      ? (isHost ? !isPlayerTurn : !isBotTurn)
       : isThinking || !isPlayerTurn;
 
   // Active player name for display
