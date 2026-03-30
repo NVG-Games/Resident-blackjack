@@ -224,7 +224,11 @@ export function gameReducer(state, action) {
         ...result,
         trumpsUsedThisTurn: newUsedCount,
         playerTrumpsUsedTotal: state.playerTrumpsUsedTotal + 1,
-        // Trump use does NOT pass the turn — player keeps acting (mirrors bot trump behaviour)
+        // Trump use does NOT pass the turn — player keeps acting (mirrors bot trump behaviour).
+        // 🚨 Reset botStood: if the bot had already stood this turn, playing a trump gives
+        // the bot a fresh chance to respond. Without this, botStood stays true and the round
+        // would instantly auto-resolve when the player stands, skipping the bot's response turn.
+        botStood: false,
         roundState: state.roundState,
         playerBet: state.playerBet + (result.playerBetDelta ?? 0),
         botBet: state.botBet + (result.botBetDelta ?? 0),
@@ -313,7 +317,12 @@ export function gameReducer(state, action) {
           ...state,
           ...result,
           botTrumpsUsedThisTurn: newBotUsed,
-          // Trump use does NOT pass the turn — bot keeps acting
+          // Trump use does NOT pass the turn — bot keeps acting.
+          // 🚨 Reset playerStood: playing a trump is not a stand — the opponent must get
+          // a fresh chance to act after the trump resolves. Without this, if the opponent
+          // had stood before the trump was played, their stood flag would still be true and
+          // the round would auto-resolve the instant the bot stands, skipping the opponent's turn.
+          playerStood: false,
           roundState: state.roundState,
           playerBet: state.playerBet + (result.playerBetDelta ?? 0),
           botBet: state.botBet + (result.botBetDelta ?? 0),
