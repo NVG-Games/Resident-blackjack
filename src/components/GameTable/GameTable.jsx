@@ -270,13 +270,6 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
     let cancelled = false;
 
     async function takeBotTurn() {
-      if (state.botStood) {
-        await wait(150);
-        if (cancelled) return;
-        dispatch({ type: ACTIONS.BOT_ACTION, payload: { type: 'stand' } });
-        return;
-      }
-
       setIsThinking(true);
 
       if (isLlm) {
@@ -307,7 +300,7 @@ export default function GameTable({ mode = 'ai', playerRole = 'clancy', seed: se
       botProcessingRef.current = false;
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.roundState, state.botHand, state.botTrumpsUsedThisTurn, state.botStood, state.gameOver, isHotSeat, isOnline, isLlm, slowBot]);
+  }, [state.roundState, state.botHand, state.botTrumpsUsedThisTurn, state.gameOver, isHotSeat, isOnline, isLlm, slowBot]);
 
   stateRef.current = state;
 

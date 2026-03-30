@@ -174,13 +174,12 @@ export function gameReducer(state, action) {
 
       // 🚨 HIT resets BOTH stood flags. STAND = skip this turn only.
       // Round ends only when both stand simultaneously. See AGENTS.md invariant #0.
-      // Exception: bust forces playerStood=true so the round can resolve without
-      // requiring the busted player to manually stand again.
+      // Bust does NOT auto-resolve — the bot still gets its turn and must stand manually.
       return {
         ...state,
         playerHand: newHand,
         deck: remaining,
-        playerStood: bust ? true : false,
+        playerStood: false,
         botStood: false,
         roundState: ROUND_STATE.BOT_TURN,
         log,
@@ -296,14 +295,13 @@ export function gameReducer(state, action) {
 
         // 🚨 HIT resets BOTH stood flags. STAND = skip this turn only.
         // Round ends only when both stand simultaneously. See AGENTS.md invariant #0.
-        // Exception: bust forces botStood=true so the round can resolve without
-        // requiring the busted player to manually stand again.
+        // Bust does NOT auto-resolve — the player still gets their turn and must stand manually.
         return {
           ...state,
           botHand: newHand,
           deck: remaining,
           playerStood: false,
-          botStood: bust ? true : false,
+          botStood: false,
           roundState: ROUND_STATE.PLAYER_TURN,
           log,
         };
@@ -529,15 +527,20 @@ export function gameReducer(state, action) {
     }
 
     case '__STATE_SYNC__': {
-      // Authoritative state patch from host — only apply if local state diverged.
-      // Prevents guest from getting stuck in BOT_TURN when host has already moved on.
+      // Authoritative state patch from host — syncs turn state to fix stuck-turn desync.
+      // IMPORTANT: never clobber a stood flag that the guest already set to true locally.
+      // If the guest already pressed Stand (botStood=true locally) but the host's sync
+      // packet still carries botStood=false (old state, network delay), applying it would
+      // silently erase the guest's stand and skip their turn entirely.
       const { roundState, playerStood, botStood } = action.payload;
+      const mergedBotStood = state.botStood || botStood;
+      const mergedPlayerStood = state.playerStood || playerStood;
       if (
         state.roundState === roundState &&
-        state.playerStood === playerStood &&
-        state.botStood === botStood
+        state.playerStood === mergedPlayerStood &&
+        state.botStood === mergedBotStood
       ) return state;
-      return { ...state, roundState, playerStood, botStood };
+      return { ...state, roundState, playerStood: mergedPlayerStood, botStood: mergedBotStood };
     }
 
     default:
